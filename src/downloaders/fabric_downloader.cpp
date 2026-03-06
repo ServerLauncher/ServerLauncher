@@ -5,7 +5,7 @@
 #include <nlohmann/json.hpp>
 #include <spdlog/spdlog.h>
 
-#include "downloaders/fabric_downloader.hpp"
+#include "fabric_downloader.hpp"
 
 const VersionList& FabricDownloader::getListOfMcVer() {
     cpr::Response r = cpr::Get(cpr::Url{mc_version_url});
