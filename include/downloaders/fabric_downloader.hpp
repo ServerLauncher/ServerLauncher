@@ -22,5 +22,5 @@ private:
     VersionList mc_cache;
     LoaderVersionList loader_cache;
     const std::string mc_version_url = "https://meta.fabricmc.net/v2/versions/game";
-    const std::string fabric_version_url = "https://meta.fabricmc.net/v2/versions/loade";
+    const std::string fabric_version_url = "https://meta.fabricmc.net/v2/versions/loader";
 };
