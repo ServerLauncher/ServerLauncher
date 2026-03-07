@@ -3,6 +3,8 @@
 #include <fstream>
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
+#include <filesystem>
+#include <filesystem>
 #include <spdlog/spdlog.h>
 
 #include "fabric_downloader.hpp"
@@ -15,8 +17,9 @@ const VersionList& FabricDownloader::getListOfMcVer() {
         for (const auto& item : json) {
             mc_cache.arr.push_back(item["version"].get<std::string>());
         }
+        spdlog::info("Fetched Minecraft versions(Fabric)");
     } else {
-        spdlog::error("Failed to fetch Minecraft versions. Status code: {}, Message: {}", r.status_code, r.error.message);
+        spdlog::error("Failed to fetch Minecraft versions(Fabric). Status code: {}, Message: {}", r.status_code, r.error.message);
         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
     return mc_cache;
@@ -35,20 +38,21 @@ const LoaderVersionList& FabricDownloader::getListOfLoaderVer(const std::string&
     }
     return loader_cache;
 }
-void FabricDownloader::downloadVersion(const VersionInfo& version, const std::string& download_path){
+void FabricDownloader::downloadVersion(const VersionInfo& version){
     const FabricVersion& ver = static_cast<const FabricVersion&>(version);
-    std::string path = download_path + "/fabric-server-" + "mc." + ver.version + "-" + "loader." + ver.loader + "-" + "installer." + ver.installer_ver + ".jar";
-
-    cpr::Response r = cpr::Get(cpr::Url{fabric_version_url + "/" + ver.version + "/" + 
+    std::string path = instances_dir + "/fabric-server-" + "mc." + ver.version + "-" + "loader." + ver.loader + "-" + "installer." + ver.installer_ver + ".jar";
+    
+    if(!std::filesystem::exists(path)){
+        cpr::Response r = cpr::Get(cpr::Url{fabric_version_url + "/" + ver.version + "/" + 
         ver.loader + "/" + ver.installer_ver + "/server/jar"});
-
-    if (r.status_code == 200) {
-        std::ofstream out(path, std::ios::binary);
-        out.write(r.text.c_str(), r.text.size());
-        out.close();
-        spdlog::info("Downloaded to {}", path);
-    } else{
-        spdlog::error("Failed to download version: {}. Status code: {}, Message: {}", ver.version, r.status_code, r.error.message);
-        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        if (r.status_code == 200) {
+            std::ofstream out(path, std::ios::binary);
+            out.write(r.text.c_str(), r.text.size());
+            out.close();
+            spdlog::info("Downloaded to {}", path);
+        } else{
+            spdlog::error("Failed to download version: {}. Status code: {}, Message: {}", ver.version, r.status_code, r.error.message);
+            throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        }
     }
 }
