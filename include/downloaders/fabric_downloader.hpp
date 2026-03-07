@@ -16,8 +16,7 @@ class FabricDownloader : public Downloader {
 public:
     const VersionList& getListOfMcVer() override;
     const LoaderVersionList& getListOfLoaderVer(const std::string& mc_version) override;
-    void downloadVersion(const VersionInfo& version, 
-                         const std::string& download_path) override;
+    void downloadVersion(const VersionInfo& version) override;
 private:
     VersionList mc_cache;
     LoaderVersionList loader_cache;
