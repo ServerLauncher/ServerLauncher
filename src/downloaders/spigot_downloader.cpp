@@ -22,12 +22,11 @@ const VersionList& SpigotDownloader::getListOfMcVer() {
                 mc_cache.arr.push_back(ver);
             }
         }
-        spdlog::info("Fetched Minecraft versions(Spigot)");
     } else {
         spdlog::error("Failed to fetch Minecraft versions(Spigot). Status code: {}, Message: {}", r.status_code, r.error.message);
         throw std::runtime_error("Failed to fetch Minecraft versions. Status code: " + std::to_string(r.status_code));
     }
-
+    spdlog::info("Fetched Minecraft {} versions(Spigot)", mc_cache.arr.size());
     return mc_cache;
 }
 void SpigotDownloader::downloadBuild(const VersionInfo& version) {
