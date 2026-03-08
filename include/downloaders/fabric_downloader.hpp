@@ -4,12 +4,12 @@
 #include "downloader.hpp"
 
 struct FabricVersion : public VersionInfo {
-    FabricVersion(std:: string version, std::string loader, std::string installer_ver): version(version), loader(loader), installer_ver(installer_ver) 
+    FabricVersion(std:: string version, std::string build_version, std::string installer_version): version(version), build_version(build_version), installer_version(installer_version) 
     {}
     
     std::string version;
-    std::string loader;
-    std::string installer_ver;
+    std::string build_version;
+    std::string installer_version;
 };
 
 class FabricDownloader : public Downloader {
@@ -21,5 +21,5 @@ private:
     VersionList mc_cache;
     LoaderVersionList loader_cache;
     const std::string mc_version_url = "https://meta.fabricmc.net/v2/versions/game";
-    const std::string fabric_version_url = "https://meta.fabricmc.net/v2/versions/loader";
+    const std::string build_url = "https://meta.fabricmc.net/v2/versions/loader";
 };
