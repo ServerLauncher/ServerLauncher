@@ -1,0 +1,24 @@
+#pragma once
+
+#include <string>
+
+#include "downloader.hpp"
+
+struct PurpurVersion : public VersionInfo {
+    PurpurVersion(std::string version, std::string build_version): version(version), build_version(build_version) 
+    {}
+    
+    std::string version;
+    std::string build_version;
+};
+
+class PurpurDownloader : public Downloader {
+public:
+    const VersionList& getListOfMcVer() override;
+    const LoaderVersionList& getListOfLoaderVer(const std::string& mc_version) override;
+    void downloadVersion(const VersionInfo& version) override;
+private:
+    VersionList mc_cache;
+    LoaderVersionList loader_cache;
+    const std::string url = "https://api.purpurmc.org/v2/purpur/";
+};
