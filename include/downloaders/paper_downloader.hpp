@@ -1,0 +1,25 @@
+#pragma once
+
+#include <string>
+
+#include "downloader.hpp"
+
+struct PaperVersion : public VersionInfo {
+    PaperVersion(std::string version, std::string build_version): version(version), build_version(build_version) 
+    {}
+    
+    std::string version;
+    std::string build_version;
+};
+
+class PaperDownloader : public Downloader {
+public:
+    const VersionList& getListOfMcVer() override;
+    const LoaderVersionList& getListOfLoaderVer(const std::string& mc_version) override;
+    void downloadVersion(const VersionInfo& version) override;
+private:
+    VersionList mc_cache;
+    LoaderVersionList loader_cache;
+    const std::string versions_url = "https://api.papermc.io/v2/projects/paper/";
+    const std::string build_url = "https://api.papermc.io/v2/projects/paper/versions/";
+};
