@@ -22,22 +22,22 @@ const VersionList& PurpurDownloader::getListOfMcVer() {
     }
     return mc_cache;
 }
-const LoaderVersionList& PurpurDownloader::getListOfLoaderVer(const std::string& mc_version){
-    if (!loader_cache.arr.empty()) return loader_cache;
+const BuildList& PurpurDownloader::getListOfBuild(const std::string& mc_version){
+    if (!build_cache.arr.empty()) return build_cache;
 
     cpr::Response r = cpr::Get(cpr::Url(url + mc_version));
 
     if (r.status_code == 200) {
         auto json = nlohmann::json::parse(r.text);
         for (const auto& item : json["builds"]["all"]) {
-            loader_cache.arr.push_back(item.get<std::string>());
+            build_cache.arr.push_back(item.get<std::string>());
         }
-        spdlog::info("Fetched Minecraft {} versions(Purpur)", loader_cache.arr.size());
+        spdlog::info("Fetched {} builds for Minecraft {} (Purpur)", build_cache.arr.size(), mc_version);
     } else {
-        spdlog::error("Failed to fetch Minecraft versions(Purpur). Status code: {}, Message: {}", r.status_code, r.error.message);
+        spdlog::error("Failed to fetch builds (Purpur). Status code: {}, Message: {}", r.status_code, r.error.message);
         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
-    return loader_cache;
+    return build_cache;
 }
 void PurpurDownloader::downloadVersion(const VersionInfo& version){
     const PurpurVersion& ver = static_cast<const PurpurVersion&>(version);

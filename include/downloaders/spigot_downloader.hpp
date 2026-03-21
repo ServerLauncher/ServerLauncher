@@ -12,8 +12,8 @@ struct SpigotVersion : public VersionInfo {
 class SpigotDownloader : public Downloader {
 public:
     const VersionList& getListOfMcVer() override;
-    const LoaderVersionList& getListOfLoaderVer(const std::string& mc_version) override {
-        throw std::logic_error("Spigot does not have separate loader versions");
+    const BuildList& getListOfBuild(const std::string& mc_version) override {
+        throw std::logic_error("Spigot does not have separate builds");
     }
     void downloadVersion(const VersionInfo& version) override {
         throw std::logic_error("Use downloadBuild instead of it");

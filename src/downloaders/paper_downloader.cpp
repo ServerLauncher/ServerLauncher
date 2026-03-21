@@ -23,22 +23,22 @@ const VersionList& PaperDownloader::getListOfMcVer() {
     return mc_cache;
 }
 
-const LoaderVersionList& PaperDownloader::getListOfLoaderVer(const std::string& mc_version) {
-    if (!loader_cache.arr.empty()) return loader_cache;
+const BuildList& PaperDownloader::getListOfBuild(const std::string& mc_version) {
+    if (!build_cache.arr.empty()) return build_cache;
 
     cpr::Response r = cpr::Get(cpr::Url(build_url + mc_version + "/builds"));
 
     if (r.status_code == 200) {
         auto json = nlohmann::json::parse(r.text);
         for (const auto& item : json["builds"]) {
-            loader_cache.arr.push_back(std::to_string(item["build"].get<int>()));
+            build_cache.arr.push_back(std::to_string(item["build"].get<int>()));
         }
-        spdlog::info("Fetched {} builds for Minecraft {} (Paper)", loader_cache.arr.size(), mc_version);
+        spdlog::info("Fetched {} builds for Minecraft {} (Paper)", build_cache.arr.size(), mc_version);
     } else {
         spdlog::error("Failed to fetch builds (Paper). Status code: {}, Message: {}", r.status_code, r.error.message);
         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
-    return loader_cache;
+    return build_cache;
 }
 
 void PaperDownloader::downloadVersion(const VersionInfo& version) {

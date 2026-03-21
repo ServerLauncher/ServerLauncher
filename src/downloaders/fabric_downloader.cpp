@@ -4,12 +4,13 @@
 #include <cpr/cpr.h>
 #include <nlohmann/json.hpp>
 #include <filesystem>
-#include <filesystem>
 #include <spdlog/spdlog.h>
 
 #include "fabric_downloader.hpp"
 
 const VersionList& FabricDownloader::getListOfMcVer() {
+    if (!mc_cache.arr.empty()) return mc_cache;
+    
     cpr::Response r = cpr::Get(cpr::Url{mc_version_url});
 
     if (r.status_code == 200) {
@@ -24,19 +25,21 @@ const VersionList& FabricDownloader::getListOfMcVer() {
     spdlog::info("Fetched Minecraft {} versions(Fabric)", mc_cache.arr.size());
     return mc_cache;
 }
-const LoaderVersionList& FabricDownloader::getListOfLoaderVer(const std::string& mc_version) {
+const BuildList& FabricDownloader::getListOfBuild(const std::string& mc_version) {
+    if (!build_cache.arr.empty()) return build_cache;
+    
     cpr::Response r = cpr::Get(cpr::Url{build_url + "/" + mc_version});
 
     if (r.status_code == 200) {
         auto json = nlohmann::json::parse(r.text);
         for (const auto& item : json) {
-            loader_cache.arr.push_back(item["loader"]["version"].get<std::string>());
+            build_cache.arr.push_back(item["loader"]["version"].get<std::string>());
         }
     }else {
         spdlog::error("Failed to fetch Fabric loader versions for Minecraft {}. Status code: {}, Message: {}", mc_version, r.status_code, r.error.message);
         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
-    return loader_cache;
+    return build_cache;
 }
 void FabricDownloader::downloadVersion(const VersionInfo& version){
     const FabricVersion& ver = static_cast<const FabricVersion&>(version);

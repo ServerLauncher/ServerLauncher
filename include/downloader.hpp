@@ -9,7 +9,7 @@
 struct VersionList {
     std::vector<std::string> arr;
 };
-struct LoaderVersionList {
+struct BuildList {
     std::vector<std::string> arr;
 };
 struct VersionInfo {
@@ -45,7 +45,7 @@ public:
             spdlog::info("Created {} directory", instances_dir);
         }
     }
-    virtual const LoaderVersionList& getListOfLoaderVer(const std::string& mc_version) = 0;
+    virtual const BuildList& getListOfBuild(const std::string& mc_version) = 0;
     virtual void downloadVersion(const VersionInfo& version) = 0;
     virtual const VersionList& getListOfMcVer() = 0;
 protected:

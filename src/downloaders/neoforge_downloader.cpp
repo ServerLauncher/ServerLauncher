@@ -29,13 +29,13 @@ const VersionList& NeoForgeDownloader::getListOfMcVer() {
         }
     }else{
         spdlog::error("Failed to fetch Minecraft versions (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error("Failed to fetch Minecraft versions. Status code: " + std::to_string(r.status_code));
+        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
     spdlog::info("Fetched {} Minecraft versions (NeoForge)", mc_cache.arr.size());
     return mc_cache;
 }
-const LoaderVersionList& NeoForgeDownloader::getListOfLoaderVer(const std::string& mc_version) {
-    if (!loader_cache.arr.empty()) return loader_cache;
+const BuildList& NeoForgeDownloader::getListOfBuild(const std::string& mc_version) {
+    if (!build_cache.arr.empty()) return build_cache;
 
     cpr::Response r = cpr::Get(cpr::Url(url + "maven-metadata.xml"));
 
@@ -59,16 +59,16 @@ const LoaderVersionList& NeoForgeDownloader::getListOfLoaderVer(const std::strin
             std::string full_ver   = (*it)[1].str();
             std::string ver_prefix = (*it)[2].str() + "." + (*it)[3].str();
             if (ver_prefix == match_prefix && seen_versions.insert(full_ver).second) {
-                loader_cache.arr.push_back(full_ver);
+                build_cache.arr.push_back(full_ver);
             }
         }
     } else {
-        spdlog::error("Failed to fetch loader versions for Minecraft {} (NeoForge). Status code: {}, Message: {}", mc_version, r.status_code, r.error.message);
-        throw std::runtime_error("Failed to fetch loader versions. Status code: " + std::to_string(r.status_code));
+        spdlog::error("Failed to fetch builds (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
+         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
 
-    spdlog::info("Fetched {} loader versions for Minecraft {} (NeoForge)", loader_cache.arr.size(), mc_version);
-    return loader_cache;
+    spdlog::info("Fetched {} builds for Minecraft {} (Paper)", build_cache.arr.size(), mc_version);
+    return build_cache;
 }
 void NeoForgeDownloader::downloadVersion(const VersionInfo& version) {
     const NeoForgeVersion& ver = static_cast<const NeoForgeVersion&>(version);

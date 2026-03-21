@@ -8,6 +8,8 @@
 #include "spigot_downloader.hpp"
 
 const VersionList& SpigotDownloader::getListOfMcVer() {
+    if (!mc_cache.arr.empty()) return mc_cache;
+    
     cpr::Response r = cpr::Get(cpr::Url(mc_version_url));
 
     if(r.status_code == 200) {
