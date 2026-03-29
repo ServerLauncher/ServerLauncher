@@ -5,11 +5,21 @@ project(MSC)
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+set(CMAKE_AUTOUIC ON)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_PREFIX_PATH "C:/msys64/ucrt64")
+
 file(GLOB_RECURSE SOURCES src/*.cpp)
 
 add_executable(MSC ${SOURCES})
 
 target_include_directories(MSC PRIVATE include include/downloaders)
+
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+target_link_libraries(MSC PRIVATE Qt6::Core Qt6::Widgets)
 
 find_package(cpr CONFIG REQUIRED)
 target_link_libraries(MSC PRIVATE cpr::cpr)
