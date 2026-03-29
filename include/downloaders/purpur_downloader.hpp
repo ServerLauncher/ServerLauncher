@@ -15,10 +15,10 @@ struct PurpurVersion : public VersionInfo {
 class PurpurDownloader : public Downloader {
 public:
     const VersionList& getListOfMcVer() override;
-    const LoaderVersionList& getListOfLoaderVer(const std::string& mc_version) override;
+    const BuildList& getListOfBuild(const std::string& mc_version) override;
     void downloadVersion(const VersionInfo& version) override;
 private:
     VersionList mc_cache;
-    LoaderVersionList loader_cache;
+    BuildList build_cache;
     const std::string url = "https://api.purpurmc.org/v2/purpur/";
 };
