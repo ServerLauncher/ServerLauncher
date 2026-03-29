@@ -67,13 +67,13 @@ const BuildList& ForgeDownloader::getListOfBuild(const std::string& mc_version) 
         std::sort(build_cache.arr.begin(), build_cache.arr.end(), [](const std::string& a, const std::string& b) {
             auto getForgeNumeric = [](const std::string& ver) {
                 std::string numeric = ver;
-                auto dashPos = numeric.find('-');
+                auto dashPos = numeric.find('-');   //Remove the Minecraft version prefix
                 if (dashPos != std::string::npos)
                     numeric = numeric.substr(dashPos + 1);
                 std::vector<int> parts;
                 std::stringstream ss(numeric);
                 std::string part;
-                while (std::getline(ss, part, '.')) {
+                while (std::getline(ss, part, '.')) {   //Split by dots and convert to integers for proper comparison
                     try { parts.push_back(std::stoi(part)); }
                     catch (...) { parts.push_back(0); }
                 }

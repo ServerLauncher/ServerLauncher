@@ -78,13 +78,13 @@ const BuildList& NeoForgeDownloader::getListOfBuild(const std::string& mc_versio
         std::sort(build_cache.arr.begin(), build_cache.arr.end(), [](const std::string& a, const std::string& b) {
             auto getNumeric = [](const std::string& ver) {
                 std::string numeric = ver;
-                auto dashPos = numeric.rfind('-');
+                auto dashPos = numeric.rfind('-');   //Remove the Minecraft version prefix
                 if (dashPos != std::string::npos && !std::isdigit(numeric[dashPos + 1]))
                     numeric = numeric.substr(0, dashPos);
                 std::vector<int> parts;
                 std::stringstream ss(numeric);
                 std::string part;
-                while (std::getline(ss, part, '.')) {
+                while (std::getline(ss, part, '.')) {   //Split by dots and convert to integers for proper comparison
                     try { parts.push_back(std::stoi(part)); }
                     catch (...) { parts.push_back(0); }
                 }
