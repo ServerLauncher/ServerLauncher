@@ -3,6 +3,8 @@
 #include <string>
 #include <regex>
 #include <filesystem>
+#include <algorithm>
+#include <sstream>
 
 #include "neoforge_downloader.hpp"
 
@@ -27,6 +29,17 @@ const VersionList& NeoForgeDownloader::getListOfMcVer() {
             if(seen_versions.insert(ver).second)
                 mc_cache.arr.push_back(ver);
         }
+        std::sort(mc_cache.arr.begin(), mc_cache.arr.end(), [](const std::string& a, const std::string& b) {
+            auto parse = [](const std::string& ver) {
+                std::vector<int> parts;
+                std::stringstream ss(ver);
+                std::string part;
+                while (std::getline(ss, part, '.'))
+                    parts.push_back(std::stoi(part));
+                return parts;
+            };
+            return parse(a) < parse(b);
+        });
     }else{
         spdlog::error("Failed to fetch Minecraft versions (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
@@ -62,12 +75,29 @@ const BuildList& NeoForgeDownloader::getListOfBuild(const std::string& mc_versio
                 build_cache.arr.push_back(full_ver);
             }
         }
+        std::sort(build_cache.arr.begin(), build_cache.arr.end(), [](const std::string& a, const std::string& b) {
+            auto getNumeric = [](const std::string& ver) {
+                std::string numeric = ver;
+                auto dashPos = numeric.rfind('-');
+                if (dashPos != std::string::npos && !std::isdigit(numeric[dashPos + 1]))
+                    numeric = numeric.substr(0, dashPos);
+                std::vector<int> parts;
+                std::stringstream ss(numeric);
+                std::string part;
+                while (std::getline(ss, part, '.')) {
+                    try { parts.push_back(std::stoi(part)); }
+                    catch (...) { parts.push_back(0); }
+                }
+                return parts;
+            };
+            return getNumeric(a) < getNumeric(b);
+        });
     } else {
         spdlog::error("Failed to fetch builds (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
-         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
 
-    spdlog::info("Fetched {} builds for Minecraft {} (Paper)", build_cache.arr.size(), mc_version);
+    spdlog::info("Fetched {} builds for Minecraft {} (NeoForge)", build_cache.arr.size(), mc_version);
     return build_cache;
 }
 void NeoForgeDownloader::downloadVersion(const VersionInfo& version) {
