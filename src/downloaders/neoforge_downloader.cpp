@@ -11,15 +11,22 @@
 const VersionList& NeoForgeDownloader::getListOfMcVer() {
     if(!mc_cache.arr.empty()) return mc_cache;
     
-    cpr::Response r = cpr::Get(cpr::Url(url + "maven-metadata.xml"));
-    std::string ver;
+    if(raw_xml_cache.empty()){
+        cpr::Response r = cpr::Get(cpr::Url(url + "maven-metadata.xml"));
+        if(!r.status_code == 200){
+            spdlog::error("Failed to fetch Minecraft versions (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
+            throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        }
+        raw_xml_cache = std::move(r.text);
+    }
 
-    if(r.status_code == 200){
         std::regex pattern(R"(<version>(\d+)\.(\d+)\.\d+[^<]*</version>)");
-        auto begin = std::sregex_iterator(r.text.begin(), r.text.end(), pattern);
+        auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), pattern);
         auto end = std::sregex_iterator();
 
         std::unordered_set<std::string> seen_versions;
+        std::string ver;
+
         for (auto i = begin; i != end; ++i) {
             if(std::stoi((*i)[1].str()) >= 26)
                 ver = (*i)[1].str() + ((*i)[2].str() == "0" ? "" : "." + (*i)[2].str());
@@ -38,21 +45,27 @@ const VersionList& NeoForgeDownloader::getListOfMcVer() {
                     parts.push_back(std::stoi(part));
                 return parts;
             };
-            return parse(a) < parse(b);
+            return parse(a) > parse(b);
         });
-    }else{
-        spdlog::error("Failed to fetch Minecraft versions (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
-    }
+
     spdlog::info("Fetched {} Minecraft versions (NeoForge)", mc_cache.arr.size());
     return mc_cache;
 }
 const BuildList& NeoForgeDownloader::getListOfBuild(const std::string& mc_version) {
-    if (!build_cache.arr.empty()) return build_cache;
+    auto it = build_cache_map.find(mc_version);
+    if (it != build_cache_map.end()) {
+        build_cache.arr = it->second;
+        return build_cache;
+    }
 
-    cpr::Response r = cpr::Get(cpr::Url(url + "maven-metadata.xml"));
-
-    if (r.status_code == 200) {
+    if(raw_xml_cache.empty()){
+        cpr::Response r = cpr::Get(cpr::Url(url + "maven-metadata.xml"));
+         if (!r.status_code == 200){
+            spdlog::error("Failed to fetch builds (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
+            throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+         }
+         raw_xml_cache = std::move(r.text);
+    }
         std::string match_prefix;
         if (mc_version.substr(0, 2) == "1.") {
             std::string without_one = mc_version.substr(2);
@@ -64,18 +77,20 @@ const BuildList& NeoForgeDownloader::getListOfBuild(const std::string& mc_versio
             match_prefix = mc_version;
         }
         std::regex pattern(R"(<version>((\d+)\.(\d+)\.[^<]+)</version>)");
-        auto begin = std::sregex_iterator(r.text.begin(), r.text.end(), pattern);
+        auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), pattern);
         auto end   = std::sregex_iterator();
 
         std::unordered_set<std::string> seen_versions;
+        std::vector<std::string> builds;
+
         for (auto it = begin; it != end; ++it) {
             std::string full_ver   = (*it)[1].str();
             std::string ver_prefix = (*it)[2].str() + "." + (*it)[3].str();
             if (ver_prefix == match_prefix && seen_versions.insert(full_ver).second) {
-                build_cache.arr.push_back(full_ver);
+                builds.push_back(full_ver);
             }
         }
-        std::sort(build_cache.arr.begin(), build_cache.arr.end(), [](const std::string& a, const std::string& b) {
+        std::sort(builds.begin(), builds.end(), [](const std::string& a, const std::string& b) {
             auto getNumeric = [](const std::string& ver) {
                 std::string numeric = ver;
                 auto dashPos = numeric.rfind('-');   //Remove the Minecraft version prefix
@@ -90,12 +105,11 @@ const BuildList& NeoForgeDownloader::getListOfBuild(const std::string& mc_versio
                 }
                 return parts;
             };
-            return getNumeric(a) < getNumeric(b);
+            return getNumeric(a) > getNumeric(b);
         });
-    } else {
-        spdlog::error("Failed to fetch builds (NeoForge). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
-    }
+
+        build_cache_map[mc_version] = builds;
+        build_cache.arr = builds;
 
     spdlog::info("Fetched {} builds for Minecraft {} (NeoForge)", build_cache.arr.size(), mc_version);
     return build_cache;

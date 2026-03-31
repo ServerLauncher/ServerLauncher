@@ -12,11 +12,17 @@
 const VersionList& ForgeDownloader::getListOfMcVer() {
     if (!mc_cache.arr.empty()) return mc_cache;
 
-    cpr::Response r = cpr::Get(cpr::Url(url));
+    if(raw_xml_cache.empty()){
+        cpr::Response r = cpr::Get(cpr::Url(url));
+        if (!r.status_code == 200) {
+            spdlog::error("Failed to fetch Minecraft versions (Forge). Status code: {}, Message: {}", r.status_code, r.error.message);
+            throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        }
+        raw_xml_cache = std::move(r.text);
+    }
 
-    if (r.status_code == 200) {
         std::regex pattern(R"(<version>([\d]+\.[\d]+(?:\.[\d]+)?)-[^<]+</version>)");
-        auto begin = std::sregex_iterator(r.text.begin(), r.text.end(), pattern);
+        auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), pattern);
         auto end   = std::sregex_iterator();
 
         std::unordered_set<std::string> seen_versions;
@@ -34,37 +40,44 @@ const VersionList& ForgeDownloader::getListOfMcVer() {
                     parts.push_back(std::stoi(part));
                 return parts;
             };
-            return parse(a) < parse(b);
+            return parse(a) > parse(b);
         });
-    } else {
-        spdlog::error("Failed to fetch Minecraft versions (Forge). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
-    }
 
     spdlog::info("Fetched {} Minecraft versions (Forge)", mc_cache.arr.size());
     return mc_cache;
 }
 
 const BuildList& ForgeDownloader::getListOfBuild(const std::string& mc_version) {
-    if (!build_cache.arr.empty()) return build_cache;
-
-    cpr::Response r = cpr::Get(cpr::Url(url));
-
-    if (r.status_code == 200) {
+    auto it = build_cache_map.find(mc_version);
+    if (it != build_cache_map.end()) {
+        build_cache.arr = it->second;
+        return build_cache;
+    }
+    
+    if(raw_xml_cache.empty()){
+        cpr::Response r = cpr::Get(cpr::Url(url));
+        if (!r.status_code == 200) {
+            spdlog::error("Failed to fetch builds (Forge). Status code: {}, Message: {}", r.status_code, r.error.message);
+            throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        }
+        raw_xml_cache = std::move(r.text);
+    }
         std::string prefix = mc_version + "-";
 
         std::regex pattern(R"(<version>([^<]+)</version>)");
-        auto begin = std::sregex_iterator(r.text.begin(), r.text.end(), pattern);
+        auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), pattern);
         auto end   = std::sregex_iterator();
 
+        std::vector<std::string> builds;
         std::unordered_set<std::string> seen_versions;
+
         for (auto it = begin; it != end; ++it) {
             std::string full_ver = (*it)[1].str();
             if (full_ver.starts_with(prefix) && seen_versions.insert(full_ver).second) {
-                build_cache.arr.push_back(full_ver);
+                builds.push_back(full_ver);
             }
         }
-        std::sort(build_cache.arr.begin(), build_cache.arr.end(), [](const std::string& a, const std::string& b) {
+        std::sort(builds.begin(), builds.end(), [](const std::string& a, const std::string& b) {
             auto getForgeNumeric = [](const std::string& ver) {
                 std::string numeric = ver;
                 auto dashPos = numeric.find('-');   //Remove the Minecraft version prefix
@@ -79,12 +92,11 @@ const BuildList& ForgeDownloader::getListOfBuild(const std::string& mc_version) 
                 }
                 return parts;
             };
-            return getForgeNumeric(a) < getForgeNumeric(b);
+            return getForgeNumeric(a) > getForgeNumeric(b);
         });
-    } else {
-        spdlog::error("Failed to fetch builds (Forge). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
-    }
+
+        build_cache_map[mc_version] = builds;
+        build_cache.arr = builds;
 
     spdlog::info("Fetched {} builds for Minecraft {} (Forge)", build_cache.arr.size(), mc_version);
     return build_cache;

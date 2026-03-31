@@ -18,8 +18,10 @@ public:
     const BuildList& getListOfBuild(const std::string& mc_version) override;
     void downloadVersion(const VersionInfo& version) override;
 private:
+    std::string raw_xml_cache;
+    std::unordered_map<std::string, std::vector<std::string>> build_cache_map;
     VersionList mc_cache;
-   BuildList build_cache;
+    BuildList build_cache;
     const std::string url = "https://maven.minecraftforge.net/releases/net/minecraftforge/forge/maven-metadata.xml";
     const std::string download_url = "https://maven.minecraftforge.net/net/minecraftforge/forge/";
 };
