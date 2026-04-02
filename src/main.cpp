@@ -1,11 +1,13 @@
-#include <iostream>
+#include <QApplication>
+#include <QWidget>
 
-#include "fabric_downloader.hpp"
-
-int main(){
-     FabricVersion ver("1.21.11", "0.18.4", "1.0.1");
-     FabricDownloader downloader;
-     downloader.downloadVersion(ver, "C:/Users/User/Downloads");
-     auto& versions = downloader.getListOfMcVer();
-     std::cout << versions;
+#include "mainwindow.hpp"
+ 
+int main(int argc, char *argv[])
+{
+    QApplication app(argc, argv);
+    MainWindow w;
+    w.show();
+    
+    return app.exec();
 }
