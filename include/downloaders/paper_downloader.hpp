@@ -18,6 +18,7 @@ public:
     const BuildList& getListOfBuild(const std::string& mc_version) override;
     void downloadVersion(const VersionInfo& version) override;
 private:
+    std::mutex mutex;
     VersionList mc_cache;
     BuildList build_cache;
     const std::string versions_url = "https://api.papermc.io/v2/projects/paper/";

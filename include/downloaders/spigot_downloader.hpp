@@ -20,6 +20,8 @@ public:
     }
     void downloadBuild(const VersionInfo& version);
 private:
+    std::mutex mutex;
+    std::string raw_xml_cache;
     VersionList mc_cache;
     const std::string mc_version_url = "https://hub.spigotmc.org/nexus/content/repositories/snapshots/org/spigotmc/spigot-api/maven-metadata.xml";
     const std::string build_url = "https://hub.spigotmc.org/jenkins/job/BuildTools/lastSuccessfulBuild/artifact/target/BuildTools.jar";

@@ -10,6 +10,7 @@
 #include "forge_downloader.hpp"
 
 const VersionList& ForgeDownloader::getListOfMcVer() {
+    std::lock_guard<std::mutex> lock(mutex);
     if (!mc_cache.arr.empty()) return mc_cache;
 
     if(raw_xml_cache.empty()){
@@ -21,33 +22,35 @@ const VersionList& ForgeDownloader::getListOfMcVer() {
         raw_xml_cache = std::move(r.text);
     }
 
-        std::regex pattern(R"(<version>([\d]+\.[\d]+(?:\.[\d]+)?)-[^<]+</version>)");
-        auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), pattern);
-        auto end   = std::sregex_iterator();
+    std::regex pattern(R"(<version>([\d]+\.[\d]+(?:\.[\d]+)?)-[^<]+</version>)");
+    auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), pattern);
+    auto end   = std::sregex_iterator();
 
-        std::unordered_set<std::string> seen_versions;
-        for (auto i = begin; i != end; ++i) {
-            std::string ver = (*i)[1].str();
-            if (seen_versions.insert(ver).second)
-                mc_cache.arr.push_back(ver);
-        }
-        std::sort(mc_cache.arr.begin(), mc_cache.arr.end(), [](const std::string& a, const std::string& b) {
-            auto parse = [](const std::string& ver) {
-                std::vector<int> parts;
-                std::stringstream ss(ver);
-                std::string part;
-                while (std::getline(ss, part, '.'))
-                    parts.push_back(std::stoi(part));
-                return parts;
-            };
-            return parse(a) > parse(b);
-        });
+    std::unordered_set<std::string> seen_versions;
+    for (auto i = begin; i != end; ++i) {
+        std::string ver = (*i)[1].str();
+        if (seen_versions.insert(ver).second)
+            mc_cache.arr.push_back(ver);
+    }
+    std::sort(mc_cache.arr.begin(), mc_cache.arr.end(), [](const std::string& a, const std::string& b) {
+        auto parse = [](const std::string& ver) {
+            std::vector<int> parts;
+            std::stringstream ss(ver);
+            std::string part;
+            while (std::getline(ss, part, '.'))
+                parts.push_back(std::stoi(part));
+            return parts;
+        };
+        return parse(a) > parse(b);
+    });
 
     spdlog::info("Fetched {} Minecraft versions (Forge)", mc_cache.arr.size());
     return mc_cache;
 }
 
 const BuildList& ForgeDownloader::getListOfBuild(const std::string& mc_version) {
+    std::lock_guard<std::mutex> lock(mutex);
+    
     auto it = build_cache_map.find(mc_version);
     if (it != build_cache_map.end()) {
         build_cache.arr = it->second;

@@ -6,6 +6,7 @@
 #include "purpur_downloader.hpp"
 
 const VersionList& PurpurDownloader::getListOfMcVer() {
+    std::lock_guard<std::mutex> lock(mutex);
     if (!mc_cache.arr.empty()) return mc_cache;
 
     cpr::Response r = cpr::Get(cpr::Url(url));
@@ -13,7 +14,7 @@ const VersionList& PurpurDownloader::getListOfMcVer() {
     if (r.status_code == 200) {
         auto json = nlohmann::json::parse(r.text);
         for (const auto& item : json["versions"]) {
-            mc_cache.arr.push_back(item.get<std::string>());
+            mc_cache.arr.insert(mc_cache.arr.begin(), item.get<std::string>());
         }
         spdlog::info("Fetched Minecraft {} versions(Purpur)", mc_cache.arr.size());
     } else {
@@ -23,6 +24,7 @@ const VersionList& PurpurDownloader::getListOfMcVer() {
     return mc_cache;
 }
 const BuildList& PurpurDownloader::getListOfBuild(const std::string& mc_version){
+    std::lock_guard<std::mutex> lock(mutex);
     if (!build_cache.arr.empty()) return build_cache;
 
     cpr::Response r = cpr::Get(cpr::Url(url + mc_version));
@@ -30,7 +32,7 @@ const BuildList& PurpurDownloader::getListOfBuild(const std::string& mc_version)
     if (r.status_code == 200) {
         auto json = nlohmann::json::parse(r.text);
         for (const auto& item : json["builds"]["all"]) {
-            build_cache.arr.push_back(item.get<std::string>());
+            build_cache.arr.insert(build_cache.arr.begin(), item.get<std::string>());
         }
         spdlog::info("Fetched {} builds for Minecraft {} (Purpur)", build_cache.arr.size(), mc_version);
     } else {

@@ -8,26 +8,30 @@
 #include "spigot_downloader.hpp"
 
 const VersionList& SpigotDownloader::getListOfMcVer() {
+    std::lock_guard<std::mutex> lock(mutex);
     if (!mc_cache.arr.empty()) return mc_cache;
-    
-    cpr::Response r = cpr::Get(cpr::Url(mc_version_url));
 
-    if(r.status_code == 200) {
-        std::regex version_pattern(R"(<version>([\d]+\.[\d]+(?:\.[\d]+)?)[^<]*<\/version>)");
-        auto begin = std::sregex_iterator(r.text.begin(), r.text.end(), version_pattern);
-        auto end = std::sregex_iterator();
-
-        std::unordered_set<std::string> seen_versions;
-        for (auto i = begin; i != end; ++i) {
-            std::string ver = (*i)[1].str();
-            if(seen_versions.insert(ver).second) { //If it's not already seen
-                mc_cache.arr.push_back(ver);
-            }
+    if(raw_xml_cache.empty()){
+        cpr::Response r = cpr::Get(cpr::Url(mc_version_url));
+        if(!r.status_code == 200){
+            spdlog::error("Failed to fetch Minecraft versions(Spigot). Status code: {}, Message: {}", r.status_code, r.error.message);
+            throw std::runtime_error("Failed to fetch Minecraft versions. Status code: " + std::to_string(r.status_code));
         }
-    } else {
-        spdlog::error("Failed to fetch Minecraft versions(Spigot). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error("Failed to fetch Minecraft versions. Status code: " + std::to_string(r.status_code));
+        raw_xml_cache = std::move(r.text);
     }
+
+    std::regex version_pattern(R"(<version>([\d]+\.[\d]+(?:\.[\d]+)?)[^<]*<\/version>)");
+    auto begin = std::sregex_iterator(raw_xml_cache.begin(), raw_xml_cache.end(), version_pattern);
+    auto end = std::sregex_iterator();
+
+    std::unordered_set<std::string> seen_versions;
+    for (auto i = begin; i != end; ++i) {
+        std::string ver = (*i)[1].str();
+        if(seen_versions.insert(ver).second) { //If it's not already seen
+            mc_cache.arr.insert(mc_cache.arr.begin(), ver);
+        }
+    }
+
     spdlog::info("Fetched Minecraft {} versions(Spigot)", mc_cache.arr.size());
     return mc_cache;
 }

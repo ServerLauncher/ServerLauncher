@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <mutex>
 
 #include "downloader.hpp"
 
@@ -18,6 +19,7 @@ public:
     const BuildList& getListOfBuild(const std::string& mc_version) override;
     void downloadVersion(const VersionInfo& version) override;
 private:
+    std::mutex mutex;
     std::string raw_xml_cache;
     std::unordered_map<std::string, std::vector<std::string>> build_cache_map;
     VersionList mc_cache;
