@@ -9,23 +9,31 @@ const VersionList& PurpurDownloader::getListOfMcVer() {
     std::lock_guard<std::mutex> lock(mutex);
     if (!mc_cache.arr.empty()) return mc_cache;
 
-    cpr::Response r = cpr::Get(cpr::Url(url));
-
-    if (r.status_code == 200) {
-        auto json = nlohmann::json::parse(r.text);
-        for (const auto& item : json["versions"]) {
-            mc_cache.arr.insert(mc_cache.arr.begin(), item.get<std::string>());
+    if(raw_json_cache.empty()){
+        cpr::Response r = cpr::Get(cpr::Url(url));
+        if(r.status_code != 200){
+            spdlog::error("Failed to fetch Minecraft versions(Purpur). Status code: {}, Message: {}", r.status_code, r.error.message);
+            throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
         }
-        spdlog::info("Fetched Minecraft {} versions(Purpur)", mc_cache.arr.size());
-    } else {
-        spdlog::error("Failed to fetch Minecraft versions(Purpur). Status code: {}, Message: {}", r.status_code, r.error.message);
-        throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
+        raw_json_cache = std::move(r.text);
     }
+
+    auto json = nlohmann::json::parse(raw_json_cache);
+    for (const auto& item : json["versions"]) {
+        mc_cache.arr.insert(mc_cache.arr.begin(), item.get<std::string>());
+    }
+    spdlog::info("Fetched Minecraft {} versions(Purpur)", mc_cache.arr.size());
+
     return mc_cache;
 }
 const BuildList& PurpurDownloader::getListOfBuild(const std::string& mc_version){
     std::lock_guard<std::mutex> lock(mutex);
-    if (!build_cache.arr.empty()) return build_cache;
+
+    auto it = build_cache_map.find(mc_version);
+    if (it != build_cache_map.end()) {
+        build_cache.arr = it->second;
+        return build_cache;
+    }
 
     cpr::Response r = cpr::Get(cpr::Url(url + mc_version));
 
@@ -39,6 +47,9 @@ const BuildList& PurpurDownloader::getListOfBuild(const std::string& mc_version)
         spdlog::error("Failed to fetch builds (Purpur). Status code: {}, Message: {}", r.status_code, r.error.message);
         throw std::runtime_error(std::to_string(r.status_code) + " " + r.error.message);
     }
+
+    build_cache_map[mc_version] = build_cache.arr;
+
     return build_cache;
 }
 void PurpurDownloader::downloadVersion(const VersionInfo& version){

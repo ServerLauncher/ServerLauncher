@@ -19,6 +19,8 @@ public:
     void downloadVersion(const VersionInfo& version) override;
 private:
     std::mutex mutex;
+    std::string raw_json_cache;
+    std::unordered_map<std::string, std::vector<std::string>> build_cache_map;
     VersionList mc_cache;
     BuildList build_cache;
     const std::string versions_url = "https://api.papermc.io/v2/projects/paper/";

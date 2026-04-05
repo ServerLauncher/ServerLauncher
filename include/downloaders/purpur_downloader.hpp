@@ -18,7 +18,9 @@ public:
     const BuildList& getListOfBuild(const std::string& mc_version) override;
     void downloadVersion(const VersionInfo& version) override;
 private:
+    std::unordered_map<std::string, std::vector<std::string>> build_cache_map;
     std::mutex mutex;
+    std::string raw_json_cache;
     VersionList mc_cache;
     BuildList build_cache;
     const std::string url = "https://api.purpurmc.org/v2/purpur/";
