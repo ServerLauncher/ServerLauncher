@@ -7,7 +7,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_PREFIX_PATH "C:/msys64/ucrt64")
 
-find_package(Qt6 REQUIRED COMPONENTS Core Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Widgets Network)
 
 qt_standard_project_setup()
 
@@ -23,11 +23,14 @@ set_target_properties(MSC PROPERTIES
 
 target_include_directories(MSC PRIVATE 
     include 
-    include/downloaders
     ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-target_link_libraries(MSC PRIVATE Qt6::Core Qt6::Widgets)
+target_link_libraries(MSC PRIVATE 
+    Qt6::Core 
+    Qt6::Widgets
+    Qt6::Network
+)
 
 find_package(cpr CONFIG REQUIRED)
 target_link_libraries(MSC PRIVATE cpr::cpr)
