@@ -12,7 +12,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
 
-    ui->loader_comboBox->addItems({"Fabric", "Forge", "NeoForge", "Paper", "Purpur", "Spigot"});
+    ui->loader_comboBox->addItems({":)", ":D", ":P", ":3", ":O", ":|", ":(", ">:("});
 }
 
 MainWindow::~MainWindow()
