@@ -6,57 +6,154 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>433</width>
-    <height>304</height>
+    <width>445</width>
+    <height>305</height>
    </rect>
+  </property>
+  <property name="sizePolicy">
+   <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+    <horstretch>0</horstretch>
+    <verstretch>0</verstretch>
+   </sizepolicy>
   </property>
   <property name="windowTitle">
    <string>MainWindow</string>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <widget class="QComboBox" name="ver_comboBox">
-    <property name="geometry">
-     <rect>
-      <x>150</x>
-      <y>130</y>
-      <width>131</width>
-      <height>31</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="build_comboBox">
-    <property name="geometry">
-     <rect>
-      <x>150</x>
-      <y>170</y>
-      <width>131</width>
-      <height>31</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QComboBox" name="loader_comboBox">
-    <property name="geometry">
-     <rect>
-      <x>150</x>
-      <y>90</y>
-      <width>131</width>
-      <height>31</height>
-     </rect>
-    </property>
-   </widget>
-   <widget class="QPushButton" name="pushButton">
-    <property name="geometry">
-     <rect>
-      <x>170</x>
-      <y>220</y>
-      <width>91</width>
-      <height>31</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string>Download</string>
-    </property>
-   </widget>
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <item>
+     <layout class="QVBoxLayout" name="build_verticalLayout">
+      <property name="sizeConstraint">
+       <enum>QLayout::SetDefaultConstraint</enum>
+      </property>
+      <item>
+       <spacer name="build_verticalSpacer_up">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Preferred</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>33</width>
+          <height>85</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item alignment="Qt::AlignHCenter">
+       <widget class="QComboBox" name="loader_comboBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignHCenter">
+       <widget class="QComboBox" name="version_comboBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+       </widget>
+      </item>
+      <item alignment="Qt::AlignHCenter">
+       <widget class="QComboBox" name="build_comboBox">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>180</width>
+          <height>25</height>
+         </size>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="build_verticalSpacer_down">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeType">
+         <enum>QSizePolicy::Fixed</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>13</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QVBoxLayout" name="download_verticalLayout">
+      <item alignment="Qt::AlignHCenter">
+       <widget class="QPushButton" name="download_button">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>30</height>
+         </size>
+        </property>
+        <property name="text">
+         <string>Download!</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="download_verticalSpacer">
+        <property name="orientation">
+         <enum>Qt::Vertical</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>20</width>
+          <height>35</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+     </layout>
+    </item>
+   </layout>
   </widget>
  </widget>
  <resources/>
