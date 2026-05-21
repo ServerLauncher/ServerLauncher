@@ -39,12 +39,3 @@ target_link_libraries(MSC PRIVATE
     Qt6::Widgets
     Qt6::Network
 )
-
-find_package(cpr CONFIG REQUIRED)
-target_link_libraries(MSC PRIVATE cpr::cpr)
-
-find_package(nlohmann_json REQUIRED)
-target_link_libraries(MSC PRIVATE nlohmann_json::nlohmann_json)
-
-find_package(spdlog REQUIRED)
-target_link_libraries(MSC PRIVATE spdlog::spdlog)
