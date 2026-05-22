@@ -4,6 +4,7 @@
 #include <QNetworkReply>
 #include <QUrl>
 #include <memory>
+#include "Sink.hpp"
 
 class NetRequest : public QObject {
     Q_OBJECT
@@ -21,10 +22,7 @@ public:
     State state = State::Inactive;
     QString errorMessage;
 
-    virtual void onSucceeded(QNetworkReply* reply) = 0;
-    virtual void onFailed(QNetworkReply* reply) {
-        errorMessage = reply->errorString();
-    }
+    std::unique_ptr<Sink> sink;
 
 signals:
     void progress(qint64 current, qint64 total);
