@@ -2,7 +2,8 @@
 #include <NetRequest.hpp>
 #include <QString>
 #include <QList>
-#include <Task.hpp>
+#include "Task.hpp"
+#include "Sink.hpp"
 
 class NetJob : public Task {
     Q_OBJECT
