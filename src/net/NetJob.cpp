@@ -3,7 +3,7 @@
 
 NetJob::NetJob(const QString& name,
             QNetworkAccessManager* man,
-            QObject* parent = nullptr): Task(parent), m_nam(man), m_name(name)
+            QObject* parent): Task(parent), m_nam(man), m_name(name)
 { }
 
 void NetJob::addRequest(NetRequest::Ptr request) {
