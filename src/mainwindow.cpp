@@ -1,6 +1,5 @@
 #include <QApplication>
 #include <QtConcurrent/QtConcurrent>
-#include <spdlog/spdlog.h>
 
 #include "mainwindow.hpp"
 #include "ui_mainwindow.h"
