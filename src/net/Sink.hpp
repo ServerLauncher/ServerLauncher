@@ -1,5 +1,5 @@
 #pragma once
-#include "Task.hpp"
+#include "tasks/Task.hpp"
 #include "Validator.hpp"
 #include <QNetworkReply>
 #include <QNetworkRequest>
