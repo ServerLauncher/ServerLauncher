@@ -1,9 +1,9 @@
 #include <QNetworkAccessManager>
-#include <NetRequest.hpp>
 #include <QString>
 #include <QList>
-#include "Task.hpp"
+#include "tasks/Task.hpp"
 #include "Sink.hpp"
+#include "NetRequest.hpp"
 
 class NetJob : public Task {
     Q_OBJECT
@@ -21,8 +21,6 @@ protected:
 
 public slots:
     void startNextRequests();
-    void onRequestFinished();
-    void onRequestProgress(qint64 received, qint64 total);
           
 private:
     void startRequest(int index);
