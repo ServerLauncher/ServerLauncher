@@ -96,3 +96,7 @@ void MainWindow::fetchMeta() {
     m_out << "[INFO] Job started\n";
     m_log.flush();
 }
+
+MainWindow::~MainWindow() {
+    delete ui;
+}
