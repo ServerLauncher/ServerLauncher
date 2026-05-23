@@ -1,40 +1,17 @@
 #include <QNetworkAccessManager>
 #include <QString>
 #include <QList>
-#include "tasks/Task.hpp"
+#include "tasks/ConcurrentTask.hpp"
 #include "Sink.hpp"
-#include "NetRequest.hpp"
+#include "NetRequestTask.hpp"
 
-class NetJob : public Task {
+class NetJob : public ConcurrentTask {
     Q_OBJECT
 public:
-    explicit NetJob(
-            const QString& name,
-            QNetworkAccessManager* man,
-            QObject* parent = nullptr);
-    
+    explicit NetJob(const QString& name, QNetworkAccessManager* man, QObject* parent = nullptr);
+
     void addRequest(NetRequest::Ptr request);
-    bool abort() override;
 
-protected:
-    void executeTask() override;
-
-public slots:
-    void startNextRequests();
-          
 private:
-    void startRequest(int index);
-    
-    QString m_name;
-    QNetworkAccessManager* m_nam; 
-    QList<NetRequest::Ptr> m_requests;
-    QList<QNetworkReply*> m_replies;
-
-    int m_done = 0;
-    int m_failed = 0;
-    int m_aborted = 0;
-
-    static constexpr int MAX_CONCURRENT = 6;
-    int m_running = 0;
-    int m_next = 0;
+    QNetworkAccessManager* m_nam;
 };
