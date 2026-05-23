@@ -5,7 +5,7 @@
 class Task : public QObject {
     Q_OBJECT
 public:
-    explicit Task(QObject* parent = nullptr) : QObject(parent) {}
+    explicit Task(QObject* parent = nullptr);
 
     enum class State {
         Inactive,
@@ -15,24 +15,16 @@ public:
         Aborted
     };
 
-    State getState() const { return m_state; }
-    bool isRunning() const { return m_state == State::Running; }
-    bool isFinished() const { return m_state == State::Completed || m_state == State::Failed || m_state == State::Aborted; }
+    State getState() const;
+    bool isRunning() const;
+    bool isFinished() const;
 
-    QString getErrorMessage() const { return m_errorMessage; }
+    QString getErrorMessage() const;
 
 public slots:
-    void start() {
-        if (m_state != State::Inactive) {
-            return;
-        }
-        m_state = State::Running;
-        emit started();
+    void start();
 
-        executeTask();
-    }
-
-    virtual bool abort() { return false; }
+    virtual bool abort();
 signals:
     void started();
     void progress(qint64 current, qint64 total, const QString& msg);
@@ -44,25 +36,12 @@ signals:
 protected:
     virtual void executeTask() = 0;
 
-    void emitCompleted() {
-        m_state = State::Completed;
-        emit completed();
-    }
-
-    void emitFailed(const QString& reason) {
-        m_state = State::Failed;
-        m_errorMessage = reason;
-        emit failed(reason);
-    }
-
-    void emitAborted() {
-        m_state = State::Aborted;
-        emit aborted();
-    }
-
-    void emitProgress(qint64 current, qint64 total, const QString& msg = {}) {
-        emit progress(current, total, msg);
-    }
+    void emitCompleted();
+    void emitFailed(const QString& reason);
+    void emitAborted();
+    void emitProgress(qint64 current, qint64 total, const QString& msg = {});
+    
+    void emitStepChanged(const QString& step);
 
 private:
     State m_state = State::Inactive;
