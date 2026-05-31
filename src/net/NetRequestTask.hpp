@@ -10,9 +10,11 @@ public:
         NetRequest::Ptr request, 
         QNetworkAccessManager* man, 
         QObject* parent = nullptr);
+
+    bool abort() override;    
+
 protected:
     void executeTask() override;
-    bool abort() override;
 
 private:
     QNetworkAccessManager* m_nam;
