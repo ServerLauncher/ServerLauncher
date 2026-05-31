@@ -28,11 +28,13 @@ public:
     QString cacheFilePath() const;
     QString cachedSha256() const { return m_fileSha256; }
     QString cachedSha1() const { return m_fileSha1; }
+    qint64 lastDataSize() const { return m_lastDataSize; }
 
 signals:
     void indexUpdated();
 
 private:
+    qint64 m_lastDataSize = 0;
     LoadStatus m_loadStatus = LoadStatus::NotCached;
     QString m_cacheDir;
     QString m_fileSha256;

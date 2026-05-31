@@ -87,6 +87,8 @@ bool MetaCache::updateFromNetwork(const QByteArray& data,
     m_fileSha256 = expectedSha256.isEmpty() ? QString(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()) : expectedSha256;
     m_fileSha1 = expectedSha1.isEmpty() ? QString(QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex()) : expectedSha1;
 
+    m_lastDataSize = data.size();
+
     m_loadStatus = LoadStatus::Remote;
     emit indexUpdated();
     return true;
