@@ -48,8 +48,8 @@ bool MetaCache::loadFromDisk(QString& errorMessage) {
 }
 
 bool MetaCache::updateFromNetwork(const QByteArray& data,
-                                QString& expectedSha1,
-                                QString& expectedSha256,
+                                const QString& expectedSha1,
+                                const QString& expectedSha256,
                                 QString& errorMessage) {
     if (!expectedSha256.isEmpty()) {
         const QString actualSha256 = QString(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());

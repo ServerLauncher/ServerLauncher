@@ -17,8 +17,8 @@ public:
     
     bool loadFromDisk(QString& errorMessage);
     bool updateFromNetwork(const QByteArray& data,
-                        QString& expectedSha1,
-                        QString& expectedSha256,
+                        const QString& expectedSha1,
+                        const QString& expectedSha256,
                         QString& errorMessage);
 
     const MetaIndex& index() const { return m_index; }
