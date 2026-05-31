@@ -16,6 +16,7 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , m_nam(new QNetworkAccessManager(this))
+    , m_metaManager(new MetaManager("cache", m_baseUrl + "index.json", m_nam, this))
 {
     ui->setupUi(this);
 
@@ -34,56 +35,37 @@ MainWindow::MainWindow(QWidget *parent)
 
 void MainWindow::fetchMeta() {
     m_out << "[INFO] fetchMeta called\n";
-    m_out << "[INFO] URL: " << m_baseUrl << "\n";
+    m_out << "[INFO] URL: https://serverlauncher.github.io/meta-launcher/index.json\n";
     m_log.flush();
 
-    auto request = std::make_shared<NetRequest>();
-    request->url = QUrl(m_baseUrl);
-    request->sink = std::make_unique<ByteArraySink>(&m_metaData);
-    m_out << "[INFO] Request created for: " << request->url.toString() << "\n";
-    m_log.flush();
+    m_metaManager->init();
 
-    auto job = new NetJob("Fetch meta", m_nam, this);
-    job->addRequest(request);
-    m_out << "[INFO] NetJob created with 1 request\n";
-    m_log.flush();
-
-    connect(job, &Task::completed, this, [this](){
-        m_out << "[OK] Job completed, received " << m_metaData.size() << " bytes\n";
+    if (m_metaManager->isLoaded()) {
+        m_out << "[INFO] Loaded from disk cache\n";
         m_log.flush();
+    }
 
-        auto doc = QJsonDocument::fromJson(m_metaData);
-        if (doc.isNull()) {
-            m_out << "[ERROR] Failed to parse JSON\n";
-            m_log.flush();
-            return;
-        }
+    auto concurrent = new ConcurrentTask("Fetch meta", 1, this);
+    auto loadTask = m_metaManager->load();
+    m_out << "[INFO] LoadMetaTask created\n";
+    m_log.flush();
 
-        auto platforms = doc.object()["platforms"].toArray();
-        m_out << "[INFO] Found " << platforms.size() << " platform(s)\n";
+    concurrent->addTask(loadTask);
+
+    connect(concurrent, &Task::completed, this, [this]() {
+        m_out << "[OK] Job completed, received "
+              << m_metaManager->cache()->lastDataSize() << " bytes\n";
         m_log.flush();
-
-        for (const auto& entry : platforms) {
-            auto obj = entry.toObject();
-            m_out << "[PLATFORM] uid: " << obj["uid"].toString()
-                  << " | name: " << obj["name"].toString()
-                  << " | url: " << obj["url"].toString()
-                  << " | sha256: " << obj["sha256"].toString().left(16) << "...\n";
-            m_log.flush();
-        }
     });
-
-    connect(job, &Task::failed, this, [this](const QString& msg){
+    connect(concurrent, &Task::failed, this, [this](const QString& msg) {
         m_out << "[ERROR] Job failed: " << msg << "\n";
         m_log.flush();
     });
-
-    connect(job, &Task::aborted, this, [this](){
+    connect(concurrent, &Task::aborted, this, [this]() {
         m_out << "[WARN] Job aborted\n";
         m_log.flush();
     });
-
-    connect(job, &Task::progress, this, [this](qint64 current, qint64 total, const QString& msg){
+    connect(concurrent, &Task::progress, this, [this](qint64 current, qint64 total, const QString& msg) {
         m_out << "[PROGRESS] " << current << "/" << total;
         if (!msg.isEmpty()) m_out << " (" << msg << ")";
         m_out << "\n";
@@ -92,7 +74,7 @@ void MainWindow::fetchMeta() {
 
     m_out << "[INFO] Starting job...\n";
     m_log.flush();
-    job->start();
+    concurrent->start();
     m_out << "[INFO] Job started\n";
     m_log.flush();
 }
