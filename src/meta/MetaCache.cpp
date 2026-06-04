@@ -1,9 +1,10 @@
 #include "MetaCache.hpp"
 #include "MetaParser.hpp"
-
+#include "LoadMetaTask.hpp"
 #include <QFile>
 #include <QSaveFile>
 #include <QDir>
+#include <QFileInfo>
 #include <QCryptographicHash>
 #include <QDebug>
 
@@ -11,35 +12,24 @@ MetaCache::MetaCache(const QString& cacheDir, QObject* parent)
     : QObject(parent), m_cacheDir(cacheDir) {
 }
 
-QString MetaCache::cacheFilePath() const {
-    return QDir(m_cacheDir).filePath("index.json");
-}
-
 bool MetaCache::loadFromDisk(QString& errorMessage) {
     const QString path = cacheFilePath();
     QFile file(path);
 
-    if (!file.exists()) {
-        m_loadStatus = LoadStatus::NotCached;
+    if (!file.exists())
         return true;
-    }
 
     if (!file.open(QIODevice::ReadOnly)) {
-        errorMessage = QString("Failed to open cache file: %1").arg(file.errorString());
+        errorMessage = QString("Cannot open cache file: %1").arg(file.errorString());
         return false;
     }
 
     const QByteArray data = file.readAll();
     file.close();
 
-    m_fileSha256 = QString(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
-    m_fileSha1 = QString(QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex());
-
-    if (!MetaParser::parse(data, m_index, errorMessage)) {
-        qWarning() << "Corrupt meta cache, removing:" << errorMessage;
+    if (!parse(data, errorMessage)) {
+        qWarning() << "Corrupt cache, removing:" << errorMessage;
         QFile::remove(path);
-        m_fileSha256.clear();
-        m_fileSha1.clear();
         return false;
     }
 
@@ -50,46 +40,91 @@ bool MetaCache::loadFromDisk(QString& errorMessage) {
 bool MetaCache::updateFromNetwork(const QByteArray& data,
                                 const QString& expectedSha1,
                                 const QString& expectedSha256,
-                                QString& errorMessage) {
+                                QString& errorMessage) 
+{
     if (!expectedSha256.isEmpty()) {
-        const QString actualSha256 = QString(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
-        if (actualSha256 != expectedSha256) {
-            errorMessage = QString("SHA256 mismatch: expected %1, got %2").arg(expectedSha256, actualSha256);
+        const QString actual = QString::fromLatin1(
+            QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()
+        );
+        if (actual != expectedSha256) {
+            errorMessage = QString("SHA256 mismatch: expected %1, got %2").arg(expectedSha256, actual);
             return false;
         }
     }
+
     if (!expectedSha1.isEmpty()) {
-        const QString actualSha1 = QString(QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex());
-        if (actualSha1 != expectedSha1) {
-            errorMessage = QString("SHA1 mismatch: expected %1, got %2").arg(expectedSha1, actualSha1);
+        const QString actual = QString::fromLatin1(
+            QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex()
+        );
+        if (actual != expectedSha1) {
+            errorMessage = QString("SHA1 mismatch: expected %1, got %2").arg(expectedSha1, actual);
             return false;
         }
     }
 
-    if(!MetaParser::parse(data, m_index, errorMessage)) {
+    if(!parse(data, errorMessage))
         return false;
-    }
-
-    QDir().mkpath(m_cacheDir);
+    
+    QDir().mkpath(QFileInfo(cacheFilePath()).absolutePath());
     QSaveFile file(cacheFilePath());
     if (!file.open(QIODevice::WriteOnly)) {
-        errorMessage = QString("Cannot open cache file for writing: %1")
-                           .arg(file.errorString());
+        errorMessage = QString("Cannot open file for writing: %1").arg(file.errorString());
         return false;
     }
 
     file.write(data);
+
     if (!file.commit()) {
-        errorMessage = QString("Failed to write cache file: %1").arg(file.errorString());
+        errorMessage = QString("Failed to commit file: %1").arg(file.errorString());
         return false;
     }
 
-    m_fileSha256 = expectedSha256.isEmpty() ? QString(QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()) : expectedSha256;
-    m_fileSha1 = expectedSha1.isEmpty() ? QString(QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex()) : expectedSha1;
+    m_fileSha256 = expectedSha256.isEmpty()
+        ? QString::fromLatin1(
+              QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex())
+        : expectedSha256;
+
+    m_fileSha1 = expectedSha1.isEmpty()
+        ? QString::fromLatin1(
+              QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex())
+        : expectedSha1;
 
     m_lastDataSize = data.size();
+    m_loadStatus   = LoadStatus::Remote;
+    return true;
+}
 
-    m_loadStatus = LoadStatus::Remote;
+Task* MetaCache::loadTask(const QString& url, QNetworkAccessManager* nam) {
+    return new LoadMetaTask(this, url, nam, this);
+}
+
+MetaIndexCache::MetaIndexCache(const QString& cacheDir, QObject* parent)
+    : MetaCache(cacheDir, parent)
+{ }
+
+QString MetaIndexCache::cacheFilePath() const {
+    return QDir(m_cacheDir).filePath("index.json");
+}
+
+bool MetaIndexCache::parse(const QByteArray& data, QString& errorMessage) {
+    if (!MetaParser::parseIndex(data, m_index, errorMessage))
+        return false;
     emit indexUpdated();
+    return true;
+}
+
+MetaPackageCache::MetaPackageCache(const QString& cacheDir, const QString& uid, QObject* parent)
+    : MetaCache(cacheDir, parent), m_uid(uid)
+    
+{ }
+
+QString MetaPackageCache::cacheFilePath() const {
+    return QDir(m_cacheDir).filePath(m_uid + "/package.json");
+}
+
+bool MetaPackageCache::parse(const QByteArray& data, QString& errorMessage) {
+    if (!MetaParser::parsePackage(data, m_package, errorMessage))
+        return false;
+    emit packageUpdated();
     return true;
 }
