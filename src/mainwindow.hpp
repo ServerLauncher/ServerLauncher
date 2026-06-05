@@ -20,7 +20,8 @@ public:
     ~MainWindow();
 
 private:
-    void fetchMeta();
+    void fetchIndex();
+    void fetchPackages();
 
     Ui::MainWindow *ui;
 

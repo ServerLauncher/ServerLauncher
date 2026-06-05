@@ -1,5 +1,6 @@
 #pragma once
 #include <QObject>
+#include <QHash>
 #include <QNetworkAccessManager>
 #include <QString>
 #include "MetaCache.hpp"
@@ -14,19 +15,30 @@ public:
                          QObject* parent = nullptr);
 
     void init();
-    LoadMetaTask* load();
 
-    const MetaIndex& index() const;
+    LoadMetaTask* loadIndex();
+    LoadMetaTask* loadPackage(const QString& uid);
+
+    const MetaIndex&    index()                          const;
+    const MetaPackage*  package(const QString& uid)      const;
     const MetaPlatform* findPlatform(const QString& uid) const;
-    bool isLoaded() const;
 
-    MetaCache* cache() const { return m_cache; }
+    bool isIndexLoaded()                        const;
+    bool isPackageLoaded(const QString& uid)    const;
+
+    MetaIndexCache*   indexCache()                     const { return m_indexCache; }
+    MetaPackageCache* packageCache(const QString& uid) const;
 
 signals:
-    void indexUpdated();
+    void indexLoaded();
+    void indexLoadedFromNetwork();
+    void packageLoaded(const QString& uid);
     void loadFailed(const QString& error);
+
 private:
-    MetaCache* m_cache;
-    QString m_url;
-    QNetworkAccessManager* m_nam;
+    MetaIndexCache*                   m_indexCache;
+    QHash<QString, MetaPackageCache*> m_packageCaches;
+    QString                           m_cacheDir;
+    QString                           m_url;
+    QNetworkAccessManager*            m_nam;
 };
