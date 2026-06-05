@@ -26,9 +26,12 @@ public:
     
     bool loadFromDisk(QString& errorMessage);
     bool updateFromNetwork(const QByteArray& data,
-                        const QString& expectedSha1,
                         const QString& expectedSha256,
+                        const QString& expectedSha1,
                         QString& errorMessage);
+
+    void setSha256(const QString& sha256) { m_sha256 = sha256; }
+    void setSha1(const QString& sha1) { m_sha1 = sha1; }
 
     LoadStatus status() const { return m_loadStatus; }
     bool isLoaded() const { return m_loadStatus != LoadStatus::NotCached; }
@@ -44,6 +47,8 @@ private:
     LoadStatus m_loadStatus = LoadStatus::NotCached;
     QString m_fileSha256;
     QString m_fileSha1;
+    QString m_sha256;
+    QString m_sha1;
 };
 
 class MetaIndexCache : public MetaCache {
@@ -55,6 +60,7 @@ public:
     bool parse(const QByteArray& data, QString& errorMessage) override;
 
     const MetaIndex& index() const { return m_index; }
+
 signals:
     void indexUpdated();
 private:

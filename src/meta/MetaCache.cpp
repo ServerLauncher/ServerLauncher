@@ -38,8 +38,8 @@ bool MetaCache::loadFromDisk(QString& errorMessage) {
 }
 
 bool MetaCache::updateFromNetwork(const QByteArray& data,
-                                const QString& expectedSha1,
                                 const QString& expectedSha256,
+                                const QString& expectedSha1,
                                 QString& errorMessage) 
 {
     if (!expectedSha256.isEmpty()) {
