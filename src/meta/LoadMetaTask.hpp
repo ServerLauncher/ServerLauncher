@@ -1,9 +1,12 @@
 #pragma once
 #include <QString>
+#include <memory>
 #include <QByteArray>
 #include "tasks/Task.hpp"
 #include "net/NetRequestTask.hpp"
 #include "MetaCache.hpp"
+
+class QNetworkAccessManager;
 
 class LoadMetaTask : public Task {
     Q_OBJECT

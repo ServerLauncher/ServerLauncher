@@ -10,10 +10,9 @@ LoadMetaTask::LoadMetaTask(MetaCache* cache,
 {}
 
 bool LoadMetaTask::abort() {
-    if (m_netTask) {
-        m_netTask->abort();
-    }
-    return true;
+    if (m_netTask) 
+        return m_netTask->abort();
+    return Task::abort();
 }
 
 void LoadMetaTask::executeTask() {
