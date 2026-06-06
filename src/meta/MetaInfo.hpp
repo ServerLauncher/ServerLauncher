@@ -15,7 +15,7 @@ struct MetaIndex {
     QDateTime generatedAt;
     QVector<MetaPlatform> platforms;
 
-    const MetaPlatform* findPlatformbyUid(const QString& uid) const {
+    const MetaPlatform* findPlatformByUid(const QString& uid) const {
         for(const auto& platform : platforms) {
             if(platform.uid == uid) {
                 return &platform;

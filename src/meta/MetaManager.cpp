@@ -68,7 +68,7 @@ LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
         m_packageCaches[uid] = cache;
     }
 
-    const MetaPlatform* platform = m_indexCache->index().findPlatformbyUid(uid);
+    const MetaPlatform* platform = m_indexCache->index().findPlatformByUid(uid);
     const QString url = platform
         ? m_url + platform->url
         : m_url + "packages/" + uid + ".json";
@@ -98,7 +98,7 @@ const MetaPackage* MetaManager::package(const QString& uid) const {
 }
 
 const MetaPlatform* MetaManager::findPlatform(const QString& uid) const {
-    return m_indexCache->index().findPlatformbyUid(uid);
+    return m_indexCache->index().findPlatformByUid(uid);
 }
 
 bool MetaManager::isIndexLoaded() const {
