@@ -25,10 +25,7 @@ public:
     Task* loadTask(const QString& url, QNetworkAccessManager* nam);
     
     bool loadFromDisk(QString& errorMessage);
-    bool updateFromNetwork(const QByteArray& data,
-                        const QString& expectedSha256,
-                        const QString& expectedSha1,
-                        QString& errorMessage);
+    bool updateFromNetwork(const QByteArray& data, QString& errorMessage);
 
     void setSha256(const QString& sha256) { m_sha256 = sha256; }
     void setSha1(const QString& sha1) { m_sha1 = sha1; }
@@ -37,6 +34,8 @@ public:
     bool isLoaded() const { return m_loadStatus != LoadStatus::NotCached; }
     QString cachedSha256() const { return m_fileSha256; }
     QString cachedSha1() const { return m_fileSha1; }
+    QString expectedSha256() const { return m_sha256; }
+    QString expectedSha1() const { return m_sha1; }
     qint64 lastDataSize() const { return m_lastDataSize; }
 
 protected:
@@ -51,6 +50,7 @@ private:
     QString m_sha1;
 };
 
+//Index
 class MetaIndexCache : public MetaCache {
     Q_OBJECT
 public:
@@ -67,6 +67,7 @@ private:
     MetaIndex m_index;
 };
 
+//Package
 class MetaPackageCache : public MetaCache {
     Q_OBJECT
 public:
