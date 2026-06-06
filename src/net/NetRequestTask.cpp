@@ -13,7 +13,12 @@ void NetRequestTask::executeTask() {
     );
 
     auto initState = m_request->sink->init(netReq);
-    if (initState == Task::State::Failed) { emitFailed("Sink init failed"); return; }
+    if (initState == Task::State::Failed) {
+        emitFailed(m_request->sink->errorMessage().isEmpty()
+            ? "Sink init failed"
+            : m_request->sink->errorMessage());
+        return;
+    }
     if (initState == Task::State::Aborted) { emitAborted(); return; }
     if (initState == Task::State::Completed) { emitCompleted(); return; }
 
@@ -49,7 +54,9 @@ void NetRequestTask::executeTask() {
             if (finalizeState == Task::State::Completed)
                 emitCompleted();
             else
-                emitFailed("Sink finalize failed");
+                emitFailed(m_request->sink->errorMessage().isEmpty()
+                    ? "Sink finalize failed"
+                    : m_request->sink->errorMessage());
         }
     });
 }
