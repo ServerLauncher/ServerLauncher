@@ -19,14 +19,14 @@ public:
     LoadMetaTask* loadIndex();
     LoadMetaTask* loadPackage(const QString& uid);
 
-    const MetaIndex&    index()                          const;
-    const MetaPackage*  package(const QString& uid)      const;
+    const MetaIndex& index() const;
+    const MetaPackage* package(const QString& uid) const;
     const MetaPlatform* findPlatform(const QString& uid) const;
 
-    bool isIndexLoaded()                        const;
-    bool isPackageLoaded(const QString& uid)    const;
+    bool isIndexLoaded() const;
+    bool isPackageLoaded(const QString& uid) const;
 
-    MetaIndexCache*   indexCache()                     const { return m_indexCache; }
+    MetaIndexCache* indexCache() const { return m_indexCache; }
     MetaPackageCache* packageCache(const QString& uid) const;
 
 signals:
@@ -36,9 +36,9 @@ signals:
     void loadFailed(const QString& error);
 
 private:
-    MetaIndexCache*                   m_indexCache;
+    MetaIndexCache* m_indexCache;
     QHash<QString, MetaPackageCache*> m_packageCaches;
-    QString                           m_cacheDir;
-    QString                           m_url;
-    QNetworkAccessManager*            m_nam;
+    QString m_cacheDir;
+    QString m_url;
+    QNetworkAccessManager* m_nam;
 };

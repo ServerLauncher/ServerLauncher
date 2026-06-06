@@ -16,7 +16,6 @@ MainWindow::MainWindow(QWidget *parent)
           this))
 {
     ui->setupUi(this);
-    ui->loader_comboBox->addItems({":)", ":D", ":P", ":3", ":O", ":|", ":(", ">:("});
 
     QDir().mkpath("logs");
     m_log.setFileName("logs/debug.log");
@@ -47,11 +46,19 @@ MainWindow::MainWindow(QWidget *parent)
     connect(m_metaManager, &MetaManager::packageLoaded, this, [this](const QString& uid) {
         m_out << "[OK] Package loaded: " << uid << "\n";
         const MetaPackage* pkg = m_metaManager->package(uid);
-        if (pkg) {
-            m_out << "[PACKAGE] name: " << pkg->name
+        if(!pkg) 
+            return;
+
+        m_out << "[PACKAGE] name: " << pkg->name
                   << " | versions: " << pkg->versions.size() << "\n";
-        }
         m_log.flush();
+
+        if(pkg->name == "Java Runtimes")
+            return;
+        
+        const QString displayName = pkg->name == "Mojang" ? "Vanilla" : pkg-> name;
+        if(ui->loader_comboBox->findText(displayName) == -1)
+            ui->loader_comboBox->addItem(displayName);
     });
 
     connect(m_metaManager, &MetaManager::loadFailed, this, [this](const QString& error) {

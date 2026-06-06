@@ -30,6 +30,8 @@ void MetaManager::init() {
             cache->setSha256(platform.sha256);
         }
 
+        m_packageCaches[platform.uid] = cache;
+
         connect(cache, &MetaPackageCache::packageUpdated,
                 this, [this, uid = platform.uid]() {
             emit packageLoaded(uid);
@@ -37,8 +39,6 @@ void MetaManager::init() {
 
         QString err;
         cache->loadFromDisk(err);
-
-        m_packageCaches[platform.uid] = cache;
     }
 }
 
