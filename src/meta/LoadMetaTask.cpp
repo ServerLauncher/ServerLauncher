@@ -25,7 +25,23 @@ void LoadMetaTask::executeTask() {
     request->url = QUrl(m_url);
 
     auto buffer = std::make_shared<QByteArray>();
-    request->sink = std::make_unique<ByteArraySink>(buffer.get());
+    auto sink = std::make_unique<ByteArraySink>(buffer.get());
+
+    // Add SHA256 validator if expected hash is available
+    const QString expectedSha256 = m_cache->expectedSha256();
+    if (!expectedSha256.isEmpty()) {
+        sink->addValidator(std::make_unique<HashValidator>(
+            QCryptographicHash::Sha256, expectedSha256.toLower()));
+    }
+
+    // Add SHA1 validator if expected hash is available
+    const QString expectedSha1 = m_cache->expectedSha1();
+    if (!expectedSha1.isEmpty()) {
+        sink->addValidator(std::make_unique<HashValidator>(
+            QCryptographicHash::Sha1, expectedSha1.toLower()));
+    }
+
+    request->sink = std::move(sink);
 
     m_netTask = std::make_shared<NetRequestTask>(request, m_nam, this);
 
@@ -36,7 +52,7 @@ void LoadMetaTask::executeTask() {
     });
     connect(m_netTask.get(), &Task::completed, this, [this, buffer]() {
         QString errorMessage;
-        if (!m_cache->updateFromNetwork(*buffer, {}, {}, errorMessage)) {
+        if (!m_cache->updateFromNetwork(*buffer, errorMessage)) {
             emitFailed(errorMessage);
             return;
         }

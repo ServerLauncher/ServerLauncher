@@ -37,34 +37,10 @@ bool MetaCache::loadFromDisk(QString& errorMessage) {
     return true;
 }
 
-bool MetaCache::updateFromNetwork(const QByteArray& data,
-                                const QString& expectedSha256,
-                                const QString& expectedSha1,
-                                QString& errorMessage) 
-{
-    if (!expectedSha256.isEmpty()) {
-        const QString actual = QString::fromLatin1(
-            QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex()
-        );
-        if (actual != expectedSha256) {
-            errorMessage = QString("SHA256 mismatch: expected %1, got %2").arg(expectedSha256, actual);
-            return false;
-        }
-    }
-
-    if (!expectedSha1.isEmpty()) {
-        const QString actual = QString::fromLatin1(
-            QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex()
-        );
-        if (actual != expectedSha1) {
-            errorMessage = QString("SHA1 mismatch: expected %1, got %2").arg(expectedSha1, actual);
-            return false;
-        }
-    }
-
+bool MetaCache::updateFromNetwork(const QByteArray& data, QString& errorMessage) {
     if(!parse(data, errorMessage))
         return false;
-    
+
     QDir().mkpath(QFileInfo(cacheFilePath()).absolutePath());
     QSaveFile file(cacheFilePath());
     if (!file.open(QIODevice::WriteOnly)) {
@@ -79,15 +55,11 @@ bool MetaCache::updateFromNetwork(const QByteArray& data,
         return false;
     }
 
-    m_fileSha256 = expectedSha256.isEmpty()
-        ? QString::fromLatin1(
-              QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex())
-        : expectedSha256;
+    m_fileSha256 = QString::fromLatin1(
+        QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
 
-    m_fileSha1 = expectedSha1.isEmpty()
-        ? QString::fromLatin1(
-              QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex())
-        : expectedSha1;
+    m_fileSha1 = QString::fromLatin1(
+        QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex());
 
     m_lastDataSize = data.size();
     m_loadStatus   = LoadStatus::Remote;

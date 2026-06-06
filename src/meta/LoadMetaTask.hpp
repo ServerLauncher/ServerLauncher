@@ -5,6 +5,7 @@
 #include "tasks/Task.hpp"
 #include "net/NetRequestTask.hpp"
 #include "MetaCache.hpp"
+#include "net/HashValidator.hpp"
 
 class QNetworkAccessManager;
 
