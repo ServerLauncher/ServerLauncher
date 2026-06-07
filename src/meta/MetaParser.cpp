@@ -75,3 +75,44 @@ bool MetaParser::parsePackage(const QByteArray& data, MetaPackage& package, QStr
 
     return true;
 }
+
+bool MetaParser::parseVersion(const QByteArray& data, MetaVersion& version, QString& errorMessage) {
+    auto doc = QJsonDocument::fromJson(data);
+    if (doc.isNull()) {
+        errorMessage = "Failed to parse JSON";
+        return false;
+    }
+
+    const auto root = doc.object();
+
+    const int formatVersion = root.value("formatVersion").toInt(-1);
+    if (formatVersion != 1) {
+        errorMessage = QString("Unsupported formatVersion: %1").arg(formatVersion);
+        return false;
+    }
+
+    version.formatVersion = formatVersion;
+    version.uid = root.value("uid").toString();
+    version.mcVersion = root.value("mcVersion").toString();
+
+    version.builds.clear();
+    for(const auto& entry : root.value("builds").toArray()) {
+        const auto obj = entry.toObject();
+        MetaBuilds builds;
+        builds.build = obj.value("build").toString();
+        builds.type = obj.value("type").toString();
+        builds.releaseTime = QDateTime::fromString(obj.value("releaseTime").toString(), Qt::ISODate);
+        builds.recommended = obj.value("recommended").toBool();
+
+        auto dl = obj.value("download").toObject();
+        builds.download.name = dl.value("name").toString();
+        builds.download.url = dl.value("url").toString();
+        builds.download.sha1 = dl.value("sha1").isNull() ? QString() :
+                                dl.value("sha1").toString();
+        builds.download.sha256 = dl.value("sha256").isNull() ? QString() :
+                                dl.value("sha256").toString();  
+        version.builds.push_back(std::move(builds));                        
+    }
+    
+    return true;
+}

@@ -86,3 +86,25 @@ private:
     QString m_uid;
     MetaPackage m_package;
 };
+
+class MetaVersionCache : public MetaCache {
+    Q_OBJECT
+public:
+    explicit MetaVersionCache(const QString& cacheDir, const QString& uid,
+        const QString& mc_version, QObject* parent = nullptr);
+    
+    QString cacheFilePath() const override;
+    bool parse(const QByteArray& data, QString& errorMessage) override;
+
+    const MetaVersion* version() const { return &m_version; }
+    const QString& mcVersion() const { return m_mcVersion; }
+    const QString& uid() const { return m_uid; }
+    
+signals:
+    void versionUpdated();
+
+private:
+    QString m_uid;
+    QString m_mcVersion;
+    MetaVersion m_version;
+};

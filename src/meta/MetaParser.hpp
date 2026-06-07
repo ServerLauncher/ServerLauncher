@@ -6,4 +6,5 @@ class MetaParser {
 public:
     static bool parseIndex(const QByteArray& data, MetaIndex& index, QString& errorMessage);
     static bool parsePackage(const QByteArray& data, MetaPackage& package, QString& errorMessage);
+    static bool parseVersion(const QByteArray& data, MetaVersion& version, QString& errorMessage);
 };

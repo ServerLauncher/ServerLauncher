@@ -52,3 +52,34 @@ struct MetaPackage {
         return recommended.contains(mc_version);
     }
 };
+
+//version.json
+struct MetaDownload {
+    QString name;
+    QString url;
+    QString sha1;
+    QString sha256;
+};
+
+struct MetaBuilds {
+    QString build;
+    QString type;
+    QDateTime releaseTime;
+    bool recommended = false;
+    MetaDownload download;
+};
+
+struct MetaVersion {
+    int formatVersion = 1;
+    QString uid;
+    QString mcVersion;
+    QVector<MetaBuilds> builds;
+
+    const MetaBuilds* findByBuild(const QString& build) {
+        for(const auto& b : builds) {
+            if(b.build == build)
+                return &b;
+        }
+        return nullptr;
+    }
+};

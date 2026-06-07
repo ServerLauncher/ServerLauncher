@@ -24,7 +24,7 @@ void MetaManager::init() {
 
     for (const auto& platform : m_indexCache->index().platforms) {
         auto cache = new MetaPackageCache(
-            QDir(m_cacheDir).filePath("packages"), platform.uid, this);
+            m_cacheDir, platform.uid, this);
         
         if (!platform.sha256.isEmpty()) {
             cache->setSha256(platform.sha256);
@@ -57,8 +57,7 @@ LoadMetaTask* MetaManager::loadIndex() {
 
 LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
     if (!m_packageCaches.contains(uid)) {
-        auto cache = new MetaPackageCache(
-            QDir(m_cacheDir).filePath("packages"), uid, this);
+        auto cache = new MetaPackageCache(m_cacheDir, uid, this);
 
         connect(cache, &MetaPackageCache::packageUpdated,
                 this, [this, uid]() {
@@ -79,6 +78,49 @@ LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
 
     auto task = new LoadMetaTask(m_packageCaches[uid], url, m_nam, this);
 
+    connect(task, &Task::completed, this, [this, uid]() {
+        emit packageLoadedFromNetwork(uid);
+    });
+    
+    connect(task, &Task::failed, this, [this](const QString& error) {
+        emit loadFailed(error);
+    });
+
+    return task;
+}
+
+LoadMetaTask* MetaManager::loadVersion(const QString& uid, const QString& mc_version) {
+    const QString& key = uid + "/" + mc_version;
+    if(!m_versionCaches.contains(key)){
+        auto cache = new MetaVersionCache(
+            m_cacheDir, uid, mc_version, this);
+
+        connect(cache, &MetaVersionCache::versionUpdated,
+                this, [this, uid, mc_version](){
+            emit versionLoaded(uid, mc_version);
+        });
+
+        m_versionCaches[key] = cache;
+
+        QString err;
+        cache->loadFromDisk(err);
+    }
+
+    const MetaPackage* pkg = package(uid);
+    if (pkg) {
+        const MetaBuild* build = pkg->findByMcVersion(mc_version);
+        if (build && !build->sha256.isEmpty())
+            m_versionCaches[key]->setSha256(build->sha256);
+    }
+
+    const QString url = m_url + uid + "/" + mc_version + ".json";
+
+    auto task = new LoadMetaTask(m_versionCaches[key], url, m_nam, this);
+
+    connect(task, &Task::completed, this, [this, uid, mc_version](){
+        emit versionLoadedfromNetwork(uid, mc_version);
+    });
+
     connect(task, &Task::failed, this, [this](const QString& error) {
         emit loadFailed(error);
     });
@@ -97,6 +139,14 @@ const MetaPackage* MetaManager::package(const QString& uid) const {
     return it.value()->package();
 }
 
+const MetaVersion* MetaManager::version(const QString& uid, const QString& mc_version) const {
+    const QString key = uid + "/" + mc_version;
+    auto it = m_versionCaches.find(key);
+    if (it == m_versionCaches.end())
+        return nullptr;
+    return it.value()->version();
+}
+
 const MetaPlatform* MetaManager::findPlatform(const QString& uid) const {
     return m_indexCache->index().findPlatformByUid(uid);
 }
@@ -112,6 +162,18 @@ bool MetaManager::isPackageLoaded(const QString& uid) const {
     return it.value()->isLoaded();
 }
 
+bool MetaManager::isVersionLoaded(const QString& uid, const QString& mc_version) const {
+    const QString key = uid + "/" + mc_version;
+    auto it = m_versionCaches.find(key);
+    if (it == m_versionCaches.end())
+        return false;
+    return it.value()->isLoaded();
+}
+
 MetaPackageCache* MetaManager::packageCache(const QString& uid) const {
     return m_packageCaches.value(uid, nullptr);
+}
+
+MetaVersionCache* MetaManager::versionCache(const QString& uid, const QString& mc_version) const {
+    return m_versionCaches.value(uid + "/" + mc_version, nullptr);
 }

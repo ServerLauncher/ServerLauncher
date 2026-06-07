@@ -100,3 +100,22 @@ bool MetaPackageCache::parse(const QByteArray& data, QString& errorMessage) {
     emit packageUpdated();
     return true;
 }
+
+MetaVersionCache::MetaVersionCache(const QString& cacheDir, const QString& uid,
+        const QString& mc_version, QObject* parent) 
+        : MetaCache(cacheDir, parent), m_mcVersion(mc_version), m_uid(uid)
+{ }
+
+QString MetaVersionCache::cacheFilePath() const {
+    return QDir(m_cacheDir).filePath(m_uid + "/" + m_mcVersion + ".json");
+}
+
+bool MetaVersionCache::parse(const QByteArray& data, QString& errorMessage) {
+    qDebug() << "MetaVersionCache::parse called for" << m_uid << m_mcVersion;
+    if (!MetaParser::parseVersion(data, m_version, errorMessage)){
+        qDebug() << "MetaVersionCache::parse FAILED:" << errorMessage;
+        return false;
+    }
+    emit versionUpdated();
+    return true;
+}
