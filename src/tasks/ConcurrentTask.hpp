@@ -13,6 +13,7 @@ public:
     ~ConcurrentTask() override;
     
     void addTask(Task* task);
+    void prioritizeTask(Task* task);
     bool abort() override;
     void clear();
 

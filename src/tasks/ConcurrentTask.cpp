@@ -13,6 +13,22 @@ ConcurrentTask::~ConcurrentTask() {
         task->disconnect(this);
 }
 
+void ConcurrentTask::prioritizeTask(Task* task) {
+    if (m_doing.contains(task))
+        return;
+
+    if (m_done.contains(task))
+        return;
+
+    QQueue<Task*> newQueue;
+    newQueue.enqueue(task);
+    for (auto t : m_queue){
+        if (t != task)
+            newQueue.enqueue(t);
+    }
+    m_queue = newQueue;
+}
+
 void ConcurrentTask::executeTask() {
     if(m_queue.isEmpty()) {
         emitCompleted();
