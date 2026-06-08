@@ -91,6 +91,14 @@ LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
 
 LoadMetaTask* MetaManager::loadVersion(const QString& uid, const QString& mc_version) {
     const QString& key = uid + "/" + mc_version;
+
+    if (m_versionTasks.contains(key)) {
+        auto existingTask = m_versionTasks[key];
+        if (!existingTask->isFinished()) {
+            return existingTask;
+        }
+    }
+
     if(!m_versionCaches.contains(key)){
         auto cache = new MetaVersionCache(
             m_cacheDir, uid, mc_version, this);
@@ -117,13 +125,21 @@ LoadMetaTask* MetaManager::loadVersion(const QString& uid, const QString& mc_ver
 
     auto task = new LoadMetaTask(m_versionCaches[key], url, m_nam, this);
 
-    connect(task, &Task::completed, this, [this, uid, mc_version](){
+    connect(task, &Task::completed, this, [this, uid, mc_version, key](){
         emit versionLoadedfromNetwork(uid, mc_version);
+        m_versionTasks.remove(key);
     });
 
-    connect(task, &Task::failed, this, [this](const QString& error) {
+    connect(task, &Task::failed, this, [this, key](const QString& error) {
         emit loadFailed(error);
+        m_versionTasks.remove(key);
     });
+
+    connect(task, &Task::aborted, this, [this, key](){
+        m_versionTasks.remove(key);
+    });
+
+    m_versionTasks[key] = task;
 
     return task;
 }

@@ -46,6 +46,7 @@ private:
     MetaIndexCache* m_indexCache;
     QHash<QString, MetaPackageCache*> m_packageCaches;
     QHash<QString, MetaVersionCache*> m_versionCaches;
+    QHash<QString, LoadMetaTask*> m_versionTasks;
     QString m_cacheDir;
     QString m_url;
     QNetworkAccessManager* m_nam;

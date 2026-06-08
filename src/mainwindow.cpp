@@ -61,6 +61,64 @@ MainWindow::MainWindow(QWidget *parent)
             ui->loader_comboBox->addItem(displayName);
     });
 
+    connect(ui->loader_comboBox, &QComboBox::currentTextChanged, this, [this](const QString& displayName){
+        ui->version_comboBox->clear();
+        ui->build_comboBox->clear();
+
+        const QString uid = displayNameToUid(displayName);
+        if(uid.isEmpty())
+            return;
+
+        const MetaPackage* pkg = m_metaManager->package(uid);
+        if (!pkg)
+            return;
+
+        for (const auto& build : pkg->versions) {
+            ui->version_comboBox->addItem(build.mcVersion);
+        }
+    });
+
+    connect(ui->version_comboBox, &QComboBox::currentTextChanged, this, [this](const QString& mcVersion){
+        ui->build_comboBox->clear();
+
+        if (mcVersion.isEmpty())
+            return;
+
+        const QString displayName = ui->loader_comboBox->currentText();
+        const QString uid = displayNameToUid(displayName);
+        if (uid.isEmpty())
+            return;
+
+        fetchVersion(uid, mcVersion);
+    });
+
+    connect(m_metaManager, &MetaManager::packageLoadedFromNetwork, this, [this](const QString& uid){
+        m_out << "[OK] Package loaded from network: " << uid << "\n";
+        m_log.flush();
+    });
+
+    connect(m_metaManager, &MetaManager::versionLoaded, this, [this](const QString& uid, const QString& mcVersion) {
+        m_out << "[OK] Version loaded: " << uid << " | " << mcVersion << "\n";
+
+        const MetaVersion* ver = m_metaManager->version(uid, mcVersion);
+        if (!ver)
+            return;
+
+        m_out << "[VERSION] mcVersion: " << ver->mcVersion
+            << " | builds: " << ver->builds.size() << "\n";
+        m_log.flush();
+
+        const QString currentUid = displayNameToUid(ui->loader_comboBox->currentText());
+        const QString currentVersion = ui->version_comboBox->currentText();
+
+        if (uid == currentUid && mcVersion == currentVersion) {
+            ui->build_comboBox->clear();
+            for (const auto& build : ver->builds) {
+                ui->build_comboBox->addItem(build.build);
+            }
+        }
+    });
+
     connect(m_metaManager, &MetaManager::loadFailed, this, [this](const QString& error) {
         m_out << "[ERROR] Load failed: " << error << "\n";
         m_log.flush();
@@ -137,6 +195,7 @@ void MainWindow::fetchPackages() {
     connect(concurrent, &Task::completed, this, [this]() {
         m_out << "[OK] All packages fetched\n";
         m_log.flush();
+        fetchVersions();
     });
     connect(concurrent, &Task::failed, this, [this](const QString& msg) {
         m_out << "[ERROR] Packages job failed: " << msg << "\n";
@@ -156,6 +215,109 @@ void MainWindow::fetchPackages() {
     m_out << "[INFO] Starting packages job...\n";
     m_log.flush();
     concurrent->start();
+}
+
+void MainWindow::fetchVersions() {
+    const auto& platforms = m_metaManager->index().platforms;
+    if (platforms.isEmpty()) {
+        m_out << "[WARN] No platforms to fetch versions from\n";
+        m_log.flush();
+        return;
+    }
+
+    m_out << "[INFO] Starting background version fetching...\n";
+    m_log.flush();
+
+    if (m_backgroundVersionFetcher) {
+        m_backgroundVersionFetcher->abort();
+        m_backgroundVersionFetcher->deleteLater();
+    }
+
+    m_backgroundVersionFetcher = new ConcurrentTask("Fetch All Versions", 2, this);
+
+    for (const auto& platform : platforms) {
+        if (platform.name == "Java Runtimes")
+            continue;
+
+        const MetaPackage* pkg = m_metaManager->package(platform.uid);
+        if (!pkg)
+            continue;
+
+        for (const auto& build : pkg->versions) {
+            if (m_metaManager->isVersionLoaded(platform.uid, build.mcVersion))
+                continue;
+
+            auto versionTask = m_metaManager->loadVersion(platform.uid, build.mcVersion);
+            m_backgroundVersionFetcher->addTask(versionTask);
+        }
+    }
+
+    connect(m_backgroundVersionFetcher, &Task::completed, this, [this]() {
+        m_out << "[OK] All background versions fetched\n";
+        m_log.flush();
+    });
+    connect(m_backgroundVersionFetcher, &Task::failed, this, [this](const QString& msg) {
+        m_out << "[ERROR] Background versions job failed: " << msg << "\n";
+        m_log.flush();
+    });
+    connect(m_backgroundVersionFetcher, &Task::aborted, this, [this]() {
+        m_out << "[WARN] Background versions job aborted\n";
+        m_log.flush();
+    });
+
+    m_out << "[INFO] Starting background versions job...\n";
+    m_log.flush();
+    m_backgroundVersionFetcher->start();
+}
+
+void MainWindow::fetchVersion(const QString& uid, const QString& mcVersion) {
+    if (m_metaManager->isVersionLoaded(uid, mcVersion)) {
+        m_out << "[INFO] Version already loaded from cache: " << uid << " " << mcVersion << "\n";
+        m_log.flush();
+
+        const MetaVersion* ver = m_metaManager->version(uid, mcVersion);
+        if (ver) {
+            ui->build_comboBox->clear();
+            for (const auto& build : ver->builds) {
+                ui->build_comboBox->addItem(build.build);
+            }
+        }
+        return;
+    }
+
+    m_out << "[INFO] Fetching version with priority: " << uid << " " << mcVersion << "\n";
+    m_log.flush();
+
+    auto versionTask = m_metaManager->loadVersion(uid, mcVersion);
+
+    connect(versionTask, &Task::completed, this, [this, uid, mcVersion]() {
+        m_out << "[OK] Version fetched: " << uid << " " << mcVersion << "\n";
+        m_log.flush();
+    });
+    connect(versionTask, &Task::failed, this, [this](const QString& msg) {
+        m_out << "[ERROR] Version fetch failed: " << msg << "\n";
+        m_log.flush();
+    });
+
+    if (m_backgroundVersionFetcher && m_backgroundVersionFetcher->isRunning()) {
+        m_out << "[INFO] Prioritizing version task in background fetcher\n";
+        m_log.flush();
+        m_backgroundVersionFetcher->prioritizeTask(versionTask);
+    } else {
+        versionTask->start();
+    }
+}
+
+QString MainWindow::displayNameToUid(const QString& displayName) const {
+    const auto& platforms = m_metaManager->index().platforms;
+    for (const auto& platform : platforms) {
+        if (platform.name == "Java Runtimes")
+            continue;
+        const QString name = platform.name == "Mojang" ? "Vanilla" : platform.name;
+        if (name == displayName)
+            return platform.uid;
+    }
+    return {};
 }
 
 MainWindow::~MainWindow() {
