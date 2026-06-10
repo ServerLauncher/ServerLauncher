@@ -22,7 +22,6 @@ public:
 private:
     void fetchIndex();
     void fetchPackages();
-    void fetchVersions();
     void fetchVersion(const QString& uid, const QString& mcVersion);
 
     QString displayNameToUid(const QString& displayName) const;
@@ -35,8 +34,6 @@ private:
     MetaManager* m_metaManager;
     QFile m_log;
     QTextStream m_out;
-
-    class ConcurrentTask* m_backgroundVersionFetcher = nullptr;
 };
 
 #endif

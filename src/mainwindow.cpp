@@ -84,6 +84,9 @@ MainWindow::MainWindow(QWidget *parent)
         if (mcVersion.isEmpty())
             return;
 
+        ui->build_comboBox->addItem("Loading...");
+        ui->build_comboBox->setEnabled(false);
+
         const QString displayName = ui->loader_comboBox->currentText();
         const QString uid = displayNameToUid(displayName);
         if (uid.isEmpty())
@@ -116,6 +119,7 @@ MainWindow::MainWindow(QWidget *parent)
             for (const auto& build : ver->builds) {
                 ui->build_comboBox->addItem(build.build);
             }
+            ui->build_comboBox->setEnabled(true);
         }
     });
 
@@ -195,7 +199,6 @@ void MainWindow::fetchPackages() {
     connect(concurrent, &Task::completed, this, [this]() {
         m_out << "[OK] All packages fetched\n";
         m_log.flush();
-        fetchVersions();
     });
     connect(concurrent, &Task::failed, this, [this](const QString& msg) {
         m_out << "[ERROR] Packages job failed: " << msg << "\n";
@@ -217,59 +220,6 @@ void MainWindow::fetchPackages() {
     concurrent->start();
 }
 
-void MainWindow::fetchVersions() {
-    const auto& platforms = m_metaManager->index().platforms;
-    if (platforms.isEmpty()) {
-        m_out << "[WARN] No platforms to fetch versions from\n";
-        m_log.flush();
-        return;
-    }
-
-    m_out << "[INFO] Starting background version fetching...\n";
-    m_log.flush();
-
-    if (m_backgroundVersionFetcher) {
-        m_backgroundVersionFetcher->abort();
-        m_backgroundVersionFetcher->deleteLater();
-    }
-
-    m_backgroundVersionFetcher = new ConcurrentTask("Fetch All Versions", 2, this);
-
-    for (const auto& platform : platforms) {
-        if (platform.name == "Java Runtimes")
-            continue;
-
-        const MetaPackage* pkg = m_metaManager->package(platform.uid);
-        if (!pkg)
-            continue;
-
-        for (const auto& build : pkg->versions) {
-            if (m_metaManager->isVersionLoaded(platform.uid, build.mcVersion))
-                continue;
-
-            auto versionTask = m_metaManager->loadVersion(platform.uid, build.mcVersion);
-            m_backgroundVersionFetcher->addTask(versionTask);
-        }
-    }
-
-    connect(m_backgroundVersionFetcher, &Task::completed, this, [this]() {
-        m_out << "[OK] All background versions fetched\n";
-        m_log.flush();
-    });
-    connect(m_backgroundVersionFetcher, &Task::failed, this, [this](const QString& msg) {
-        m_out << "[ERROR] Background versions job failed: " << msg << "\n";
-        m_log.flush();
-    });
-    connect(m_backgroundVersionFetcher, &Task::aborted, this, [this]() {
-        m_out << "[WARN] Background versions job aborted\n";
-        m_log.flush();
-    });
-
-    m_out << "[INFO] Starting background versions job...\n";
-    m_log.flush();
-    m_backgroundVersionFetcher->start();
-}
-
 void MainWindow::fetchVersion(const QString& uid, const QString& mcVersion) {
     if (m_metaManager->isVersionLoaded(uid, mcVersion)) {
         m_out << "[INFO] Version already loaded from cache: " << uid << " " << mcVersion << "\n";
@@ -285,7 +235,7 @@ void MainWindow::fetchVersion(const QString& uid, const QString& mcVersion) {
         return;
     }
 
-    m_out << "[INFO] Fetching version with priority: " << uid << " " << mcVersion << "\n";
+    m_out << "[INFO] Fetching version: " << uid << " " << mcVersion << "\n";
     m_log.flush();
 
     auto versionTask = m_metaManager->loadVersion(uid, mcVersion);
@@ -299,13 +249,7 @@ void MainWindow::fetchVersion(const QString& uid, const QString& mcVersion) {
         m_log.flush();
     });
 
-    if (m_backgroundVersionFetcher && m_backgroundVersionFetcher->isRunning()) {
-        m_out << "[INFO] Prioritizing version task in background fetcher\n";
-        m_log.flush();
-        m_backgroundVersionFetcher->prioritizeTask(versionTask);
-    } else {
-        versionTask->start();
-    }
+    versionTask->start();
 }
 
 QString MainWindow::displayNameToUid(const QString& displayName) const {
