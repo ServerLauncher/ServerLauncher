@@ -84,8 +84,15 @@ MainWindow::MainWindow(QWidget *parent)
         if (mcVersion.isEmpty())
             return;
 
-        ui->build_comboBox->addItem("Loading...");
-        ui->build_comboBox->setEnabled(false);
+        if(ui->loader_comboBox->currentText() != "Vanilla"){
+            ui->build_comboBox->addItem("Loading...");
+            ui->build_comboBox->setEnabled(false);
+        }
+        else {
+            ui->build_comboBox->addItem("N/A");
+            ui->build_comboBox->setEnabled(false);
+            return;
+        }
 
         const QString displayName = ui->loader_comboBox->currentText();
         const QString uid = displayNameToUid(displayName);
