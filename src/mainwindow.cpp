@@ -238,6 +238,7 @@ void MainWindow::fetchVersion(const QString& uid, const QString& mcVersion) {
             for (const auto& build : ver->builds) {
                 ui->build_comboBox->addItem(build.build);
             }
+            ui->build_comboBox->setEnabled(true);
         }
         return;
     }
