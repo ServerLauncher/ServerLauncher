@@ -30,7 +30,6 @@ private:
 
     QNetworkAccessManager* m_nam;
     QByteArray m_metaData;
-    QString m_baseUrl = "https://serverlauncher.github.io/meta-launcher/";
     MetaManager* m_metaManager;
     QFile m_log;
     QTextStream m_out;
