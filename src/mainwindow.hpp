@@ -5,6 +5,7 @@
 #include <QNetworkAccessManager>
 #include <QByteArray>
 #include <QFile>
+#include <QTextStream>
 #include "meta/MetaManager.hpp"
 
 QT_BEGIN_NAMESPACE
@@ -29,7 +30,6 @@ private:
     Ui::MainWindow *ui;
 
     QNetworkAccessManager* m_nam;
-    QByteArray m_metaData;
     MetaManager* m_metaManager;
     QFile m_log;
     QTextStream m_out;
