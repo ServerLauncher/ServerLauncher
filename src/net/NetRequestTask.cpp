@@ -22,35 +22,37 @@ void NetRequestTask::executeTask() {
     if (initState == Task::State::Aborted) { emitAborted(); return; }
     if (initState == Task::State::Completed) { emitCompleted(); return; }
 
-    QNetworkReply* reply = m_nam->get(netReq);
+    m_reply = m_nam->get(netReq);
 
-    connect(reply, &QNetworkReply::readyRead, this, [this, reply]() {
-        auto data = reply->readAll();
+    connect(m_reply, &QNetworkReply::readyRead, this, [this]() {
+        if (!m_reply) return;
+        auto data = m_reply->readAll();
         if (m_request->sink->write(&data) == Task::State::Failed)
-            reply->abort();
+            m_reply->abort();
     });
 
-    connect(reply, &QNetworkReply::downloadProgress, this,
+    connect(m_reply, &QNetworkReply::downloadProgress, this,
         [this](qint64 received, qint64 total) {
             emitProgress(received, total, m_request->url.fileName());
         }
     );
 
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
+    connect(m_reply, &QNetworkReply::finished, this, [this]() {
+        if (!m_reply) return;
+        m_reply->deleteLater();
 
-        bool isAbort = (reply->error() == QNetworkReply::OperationCanceledError);
+        bool isAbort = (m_reply->error() == QNetworkReply::OperationCanceledError);
 
         if (isAbort) {
             m_request->sink->abort();
             emitAborted();
         }
-        else if (reply->error() != QNetworkReply::NoError) {
+        else if (m_reply->error() != QNetworkReply::NoError) {
             m_request->sink->abort();
-            emitFailed(reply->errorString());
+            emitFailed(m_reply->errorString());
         }
         else {
-            auto finalizeState = m_request->sink->finalize(*reply);
+            auto finalizeState = m_request->sink->finalize(*m_reply);
             if (finalizeState == Task::State::Completed)
                 emitCompleted();
             else
@@ -62,5 +64,9 @@ void NetRequestTask::executeTask() {
 }
 
 bool NetRequestTask::abort() {
-    return true;
+    if (m_reply) {
+        m_reply->abort();
+        return true;
+    }
+    return false;
 }

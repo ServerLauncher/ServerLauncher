@@ -2,6 +2,7 @@
 #include "tasks/Task.hpp"
 #include "NetRequest.hpp"
 #include <QNetworkAccessManager>
+#include <QPointer>
 
 class NetRequestTask : public Task {
     Q_OBJECT
@@ -19,4 +20,5 @@ protected:
 private:
     QNetworkAccessManager* m_nam;
     NetRequest::Ptr m_request;
+    QPointer<QNetworkReply> m_reply;
 };
