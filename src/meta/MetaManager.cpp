@@ -42,17 +42,49 @@ void MetaManager::init() {
     }
 }
 
-LoadMetaTask* MetaManager::loadIndex() {
-    auto task = new LoadMetaTask(m_indexCache, m_url + "index.json", m_nam, this);
+LoadMetaTask* MetaManager::startOrReuseTask(
+    QHash<QString, LoadMetaTask*> MetaManager::* taskMapPtr,
+    const QString& key,
+    MetaCache* cache,
+    const QString& url,
+    std::function<void()> onSuccess)
+{
+    auto& taskMap = this->*taskMapPtr;
 
-    connect(task, &Task::completed, this, [this]() {
-        emit indexLoadedFromNetwork();
+    if (taskMap.contains(key)) {
+        auto existing = taskMap.value(key);
+        if (!existing->isFinished()) {
+            return existing;
+        }
+    }
+
+    auto task = new LoadMetaTask(cache, url, m_nam, this);
+
+    connect(task, &Task::completed, this, [this, taskMapPtr, key, onSuccess, task]() {
+        (this->*taskMapPtr).remove(key);
+        onSuccess();
+        task->deleteLater();
     });
-    connect(task, &Task::failed, this, [this](const QString& error) {
+    connect(task, &Task::failed, this, [this, taskMapPtr, key, task](const QString& error) {
+        (this->*taskMapPtr).remove(key);
         emit loadFailed(error);
+        task->deleteLater();
+    });
+    connect(task, &Task::aborted, this, [this, taskMapPtr, key, task]() {
+        (this->*taskMapPtr).remove(key);
+        task->deleteLater();
     });
 
+    taskMap[key] = task;
     return task;
+}
+
+LoadMetaTask* MetaManager::loadIndex() {
+    const QString key = QStringLiteral("index");
+    return startOrReuseTask(
+        &MetaManager::m_indexTasks, key,
+        m_indexCache, m_url + "index.json",
+        [this]() { emit indexLoadedFromNetwork(); });
 }
 
 LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
@@ -68,6 +100,10 @@ LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
     }
 
     const MetaPlatform* platform = m_indexCache->index().findPlatformByUid(uid);
+    if (!platform) {
+        qWarning() << "loadPackage: uid not found in index, falling back to default URL:" << uid;
+    }
+
     const QString url = platform
         ? m_url + platform->url
         : m_url + "packages/" + uid + ".json";
@@ -76,30 +112,16 @@ LoadMetaTask* MetaManager::loadPackage(const QString& uid) {
        m_packageCaches[uid]->setSha256(platform->sha256);
     }
 
-    auto task = new LoadMetaTask(m_packageCaches[uid], url, m_nam, this);
-
-    connect(task, &Task::completed, this, [this, uid]() {
-        emit packageLoadedFromNetwork(uid);
-    });
-    
-    connect(task, &Task::failed, this, [this](const QString& error) {
-        emit loadFailed(error);
-    });
-
-    return task;
+    return startOrReuseTask(
+        &MetaManager::m_packageTasks, uid,
+        m_packageCaches[uid], url,
+        [this, uid]() { emit packageLoadedFromNetwork(uid); });
 }
 
 LoadMetaTask* MetaManager::loadVersion(const QString& uid, const QString& mc_version) {
-    const QString& key = uid + "/" + mc_version;
+    const QString key = uid + "/" + mc_version;
 
-    if (m_versionTasks.contains(key)) {
-        auto existingTask = m_versionTasks[key];
-        if (!existingTask->isFinished()) {
-            return existingTask;
-        }
-    }
-
-    if(!m_versionCaches.contains(key)){
+    if (!m_versionCaches.contains(key)) {
         auto cache = new MetaVersionCache(
             m_cacheDir, uid, mc_version, this);
 
@@ -123,25 +145,10 @@ LoadMetaTask* MetaManager::loadVersion(const QString& uid, const QString& mc_ver
 
     const QString url = m_url + uid + "/" + mc_version + ".json";
 
-    auto task = new LoadMetaTask(m_versionCaches[key], url, m_nam, this);
-
-    connect(task, &Task::completed, this, [this, uid, mc_version, key](){
-        emit versionLoadedfromNetwork(uid, mc_version);
-        m_versionTasks.remove(key);
-    });
-
-    connect(task, &Task::failed, this, [this, key](const QString& error) {
-        emit loadFailed(error);
-        m_versionTasks.remove(key);
-    });
-
-    connect(task, &Task::aborted, this, [this, key](){
-        m_versionTasks.remove(key);
-    });
-
-    m_versionTasks[key] = task;
-
-    return task;
+    return startOrReuseTask(
+        &MetaManager::m_versionTasks, key,
+        m_versionCaches[key], url,
+        [this, uid, mc_version]() { emit versionLoadedFromNetwork(uid, mc_version); });
 }
 
 const MetaIndex& MetaManager::index() const {

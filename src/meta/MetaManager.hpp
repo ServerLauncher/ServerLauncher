@@ -39,14 +39,25 @@ signals:
     void packageLoaded(const QString& uid);
     void packageLoadedFromNetwork(const QString& uid);
     void versionLoaded(const QString& uid, const QString& mc_version);
-    void versionLoadedfromNetwork(const QString& uid, const QString& mc_version);
+    void versionLoadedFromNetwork(const QString& uid, const QString& mc_version);
     void loadFailed(const QString& error);
 
 private:
+    LoadMetaTask* startOrReuseTask(
+        QHash<QString, LoadMetaTask*> MetaManager::* taskMapPtr,
+        const QString& key,
+        MetaCache* cache,
+        const QString& url,
+        std::function<void()> onSuccess);
+    
     MetaIndexCache* m_indexCache;
     QHash<QString, MetaPackageCache*> m_packageCaches;
     QHash<QString, MetaVersionCache*> m_versionCaches;
+    
+    QHash<QString, LoadMetaTask*> m_indexTasks;
+    QHash<QString, LoadMetaTask*> m_packageTasks;
     QHash<QString, LoadMetaTask*> m_versionTasks;
+    
     QString m_cacheDir;
     QString m_url;
     QNetworkAccessManager* m_nam;
