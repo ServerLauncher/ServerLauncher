@@ -33,6 +33,11 @@ bool MetaCache::loadFromDisk(QString& errorMessage) {
         return false;
     }
 
+    m_fileSha256 = QString::fromLatin1(
+        QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
+    m_fileSha1 = QString::fromLatin1(
+        QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex());
+    m_lastDataSize = data.size();
     m_loadStatus = LoadStatus::Local;
     return true;
 }
@@ -57,7 +62,6 @@ bool MetaCache::updateFromNetwork(const QByteArray& data, QString& errorMessage)
 
     m_fileSha256 = QString::fromLatin1(
         QCryptographicHash::hash(data, QCryptographicHash::Sha256).toHex());
-
     m_fileSha1 = QString::fromLatin1(
         QCryptographicHash::hash(data, QCryptographicHash::Sha1).toHex());
 
