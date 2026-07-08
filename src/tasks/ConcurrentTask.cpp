@@ -105,8 +105,10 @@ bool ConcurrentTask::abort() {
     }
 
     for (auto task : m_doing) {
+        task->disconnect(this);
         task->abort();
     }
+    m_doing.clear();
 
     emitAborted();
     return true;
