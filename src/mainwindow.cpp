@@ -24,6 +24,8 @@ MainWindow::MainWindow(QWidget *parent)
     }
     m_out.setDevice(&m_log);
 
+    ui->loader_comboBox->setInsertPolicy(QComboBox::InsertAlphabetically);
+
     connect(m_metaManager, &MetaManager::indexLoaded, this, [this]() {
         m_out << "[OK] Meta index loaded\n";
 
