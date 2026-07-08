@@ -21,6 +21,28 @@ void LoadMetaTask::executeTask() {
         return;
     }
 
+    if (m_cache->status() == MetaCache::LoadStatus::Local) {
+        const QString expectedSha256 = m_cache->expectedSha256();
+        const QString expectedSha1 = m_cache->expectedSha1();
+
+        bool allExpectedMatch = true;
+        bool anyExpected = false;
+
+        if (!expectedSha256.isEmpty()) {
+            anyExpected = true;
+            allExpectedMatch &= (m_cache->cachedSha256() == expectedSha256.toLower());
+        }
+        if (!expectedSha1.isEmpty()) {
+            anyExpected = true;
+            allExpectedMatch &= (m_cache->cachedSha1() == expectedSha1.toLower());
+        }
+
+        if (anyExpected && allExpectedMatch) {
+            emitCompleted();
+            return;
+        }
+    }
+
     auto request = std::make_shared<NetRequest>();
     request->url = QUrl(m_url);
 
