@@ -2,11 +2,15 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
+#include <QJsonParseError>
+#include <QDebug>
 
 bool MetaParser::parseIndex(const QByteArray& data, MetaIndex& index, QString& errorMessage) {
-    auto doc = QJsonDocument::fromJson(data);
-    if (doc.isNull()) {
-        errorMessage = "Failed to parse JSON";
+    QJsonParseError parseError;
+    auto doc = QJsonDocument::fromJson(data, &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        errorMessage = QString("JSON parse error: %1 (offset %2)")
+            .arg(parseError.errorString()).arg(parseError.offset);
         return false;
     }
 
@@ -20,14 +24,16 @@ bool MetaParser::parseIndex(const QByteArray& data, MetaIndex& index, QString& e
 
     index.formatVersion = formatVersion;
     index.generatedAt = QDateTime::fromString(root.value("generatedAt").toString(), Qt::ISODate);
-    const auto platforms = root.value("platforms").toArray();
+    if (!index.generatedAt.isValid()) {
+        qWarning() << "MetaParser::parseIndex: invalid generatedAt timestamp";
+    }
 
+    const auto platforms = root.value("platforms").toArray();
     index.platforms.clear();
 
-    for(const auto& platform : platforms) {
+    for (const auto& platform : platforms) {
         const auto obj = platform.toObject();
         MetaPlatform info;
-        
         info.uid = obj.value("uid").toString();
         info.name = obj.value("name").toString();
         info.sha256 = obj.value("sha256").toString();
@@ -38,10 +44,12 @@ bool MetaParser::parseIndex(const QByteArray& data, MetaIndex& index, QString& e
     return true;
 }
 
-bool MetaParser::parsePackage(const QByteArray& data, MetaPackage& package, QString& errorMessage){
-    auto doc = QJsonDocument::fromJson(data);
-    if (doc.isNull()) {
-        errorMessage = "Failed to parse JSON";
+bool MetaParser::parsePackage(const QByteArray& data, MetaPackage& package, QString& errorMessage) {
+    QJsonParseError parseError;
+    auto doc = QJsonDocument::fromJson(data, &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        errorMessage = QString("JSON parse error: %1 (offset %2)")
+            .arg(parseError.errorString()).arg(parseError.offset);
         return false;
     }
 
@@ -58,12 +66,12 @@ bool MetaParser::parsePackage(const QByteArray& data, MetaPackage& package, QStr
     package.name = root.value("name").toString();
 
     package.recommended.clear();
-    for(const auto& entry : root.value("recommended").toArray()){
+    for (const auto& entry : root.value("recommended").toArray()) {
         package.recommended.push_back(entry.toString());
     }
 
     package.versions.clear();
-    for(const auto& entry : root.value("versions").toArray()){
+    for (const auto& entry : root.value("versions").toArray()) {
         const auto obj = entry.toObject();
         MetaBuild build;
         build.mcVersion = obj.value("mcVersion").toString();
@@ -77,9 +85,11 @@ bool MetaParser::parsePackage(const QByteArray& data, MetaPackage& package, QStr
 }
 
 bool MetaParser::parseVersion(const QByteArray& data, MetaVersion& version, QString& errorMessage) {
-    auto doc = QJsonDocument::fromJson(data);
-    if (doc.isNull()) {
-        errorMessage = "Failed to parse JSON";
+    QJsonParseError parseError;
+    auto doc = QJsonDocument::fromJson(data, &parseError);
+    if (parseError.error != QJsonParseError::NoError) {
+        errorMessage = QString("JSON parse error: %1 (offset %2)")
+            .arg(parseError.errorString()).arg(parseError.offset);
         return false;
     }
 
@@ -96,23 +106,24 @@ bool MetaParser::parseVersion(const QByteArray& data, MetaVersion& version, QStr
     version.mcVersion = root.value("mcVersion").toString();
 
     version.builds.clear();
-    for(const auto& entry : root.value("builds").toArray()) {
+    for (const auto& entry : root.value("builds").toArray()) {
         const auto obj = entry.toObject();
         MetaBuilds builds;
         builds.build = obj.value("build").toString();
         builds.type = obj.value("type").toString();
         builds.releaseTime = QDateTime::fromString(obj.value("releaseTime").toString(), Qt::ISODate);
+        if (!builds.releaseTime.isValid()) {
+            qWarning() << "MetaParser::parseVersion: invalid releaseTime for build" << builds.build;
+        }
         builds.recommended = obj.value("recommended").toBool();
 
         auto dl = obj.value("download").toObject();
         builds.download.name = dl.value("name").toString();
         builds.download.url = dl.value("url").toString();
-        builds.download.sha1 = dl.value("sha1").isNull() ? QString() :
-                                dl.value("sha1").toString();
-        builds.download.sha256 = dl.value("sha256").isNull() ? QString() :
-                                dl.value("sha256").toString();  
-        version.builds.push_back(std::move(builds));                        
+        builds.download.sha1 = dl.value("sha1").isNull() ? QString() : dl.value("sha1").toString();
+        builds.download.sha256 = dl.value("sha256").isNull() ? QString() : dl.value("sha256").toString();
+        version.builds.push_back(std::move(builds));
     }
-    
+
     return true;
 }
