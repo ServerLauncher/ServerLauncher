@@ -28,6 +28,8 @@ public:
     QString errorMessage() const { return m_errorMessage; }
 
 protected:
+    void setErrorMessage(const QString& errorMessage) { m_errorMessage = errorMessage; }
+
     bool initAllValidators(QNetworkRequest& request) {
         for (const auto& validator : m_validators) {
             if (!validator->init(request)) {

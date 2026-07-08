@@ -75,7 +75,7 @@ struct MetaVersion {
     QString mcVersion;
     QVector<MetaBuilds> builds;
 
-    const MetaBuilds* findByBuild(const QString& build) {
+    const MetaBuilds* findByBuild(const QString& build) const {
         for(const auto& b : builds) {
             if(b.build == build)
                 return &b;
