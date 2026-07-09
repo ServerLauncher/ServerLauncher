@@ -34,6 +34,25 @@ public:
         : m_algorithm(algorithm), m_expectedHash(expectedHash), m_hash(algorithm)
     { }
 
+    static std::unique_ptr<HashValidator> fromExpectedHex(const QString& expectedHex) {
+        if (expectedHex.isEmpty())
+            return nullptr;
+
+        QCryptographicHash::Algorithm algo;
+        switch (expectedHex.length()) {
+            case 32: algo = QCryptographicHash::Md5;    break;
+            case 40: algo = QCryptographicHash::Sha1;   break;
+            case 64: algo = QCryptographicHash::Sha256; break;
+            default:
+                qWarning() << "HashValidator: unexpected hash length"
+                           << expectedHex.length()
+                           << "- cannot determine algorithm, skipping this hash";
+                return nullptr;
+        }
+
+        return std::make_unique<HashValidator>(algo, expectedHex.toLower());
+    }
+
     bool init(QNetworkRequest& request) override {
         Q_UNUSED(request);
         m_hash.reset();
