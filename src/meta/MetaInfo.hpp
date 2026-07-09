@@ -59,6 +59,7 @@ struct MetaDownload {
     QString url;
     QString sha1;
     QString sha256;
+    QString md5;
 };
 
 struct MetaBuilds {

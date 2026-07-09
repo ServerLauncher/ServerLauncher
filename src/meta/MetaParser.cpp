@@ -122,6 +122,7 @@ bool MetaParser::parseVersion(const QByteArray& data, MetaVersion& version, QStr
         builds.download.url = dl.value("url").toString();
         builds.download.sha1 = dl.value("sha1").isNull() ? QString() : dl.value("sha1").toString();
         builds.download.sha256 = dl.value("sha256").isNull() ? QString() : dl.value("sha256").toString();
+        builds.download.md5 = dl.value("md5").isNull() ? QString() : dl.value("md5").toString();
         version.builds.push_back(std::move(builds));
     }
 
