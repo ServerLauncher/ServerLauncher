@@ -5,6 +5,11 @@
 #include <QString>
 #include "MetaCache.hpp"
 #include "LoadMetaTask.hpp"
+#include "net/FileSink.hpp"
+#include "net/NetRequestTask.hpp"
+#include "net/NetRequest.hpp"
+#include "net/HashValidator.hpp"
+#include <QCryptographicHash>
 
 class MetaManager : public QObject {
     Q_OBJECT
@@ -33,6 +38,9 @@ public:
     MetaPackageCache* packageCache(const QString& uid) const;
     MetaVersionCache* versionCache(const QString& uid, const QString& mc_version) const;
 
+    NetRequestTask* download(const QString& uid, const QString& mc_version, 
+                                const QString& build = QString(), const QString& destDir = QString());
+
 signals:
     void indexLoaded();
     void indexLoadedFromNetwork();
@@ -41,6 +49,13 @@ signals:
     void versionLoaded(const QString& uid, const QString& mc_version);
     void versionLoadedFromNetwork(const QString& uid, const QString& mc_version);
     void loadFailed(const QString& error);
+
+    void downloadProgress(const QString& uid, const QString& mc_version,
+                            const QString& build, qint64 current, qint64 total);
+    void downloaded(const QString& uid, const QString& mc_version,
+                    const QString& build, const QString& filePath);
+    void downloadFailed(const QString& uid, const QString& mc_version,
+                        const QString& build, const QString& error);
 
 private:
     LoadMetaTask* startOrReuseTask(
@@ -57,6 +72,7 @@ private:
     QHash<QString, LoadMetaTask*> m_indexTasks;
     QHash<QString, LoadMetaTask*> m_packageTasks;
     QHash<QString, LoadMetaTask*> m_versionTasks;
+    QHash<QString, NetRequestTask*> m_downloadTasks;
     
     QString m_cacheDir;
     QString m_url;

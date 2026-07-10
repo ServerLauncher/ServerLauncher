@@ -82,21 +82,22 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(ui->version_comboBox, &QComboBox::currentTextChanged, this, [this](const QString& mcVersion){
         ui->build_comboBox->clear();
+        ui->download_button->setEnabled(false);
 
         if (mcVersion.isEmpty())
             return;
 
-        if(ui->loader_comboBox->currentText() != "Vanilla"){
+        const QString displayName = ui->loader_comboBox->currentText();
+        const bool isVanilla = (displayName == "Vanilla");
+
+        if (isVanilla) {
+            ui->build_comboBox->addItem("N/A");
+            ui->build_comboBox->setEnabled(false);
+        } else {
             ui->build_comboBox->addItem("Loading...");
             ui->build_comboBox->setEnabled(false);
         }
-        else {
-            ui->build_comboBox->addItem("N/A");
-            ui->build_comboBox->setEnabled(false);
-            return;
-        }
 
-        const QString displayName = ui->loader_comboBox->currentText();
         const QString uid = displayNameToUid(displayName);
         if (uid.isEmpty())
             return;
@@ -120,21 +121,75 @@ MainWindow::MainWindow(QWidget *parent)
             << " | builds: " << ver->builds.size() << "\n";
         m_log.flush();
 
-        const QString currentUid = displayNameToUid(ui->loader_comboBox->currentText());
+        const QString displayName = ui->loader_comboBox->currentText();
+        const QString currentUid = displayNameToUid(displayName);
         const QString currentVersion = ui->version_comboBox->currentText();
 
         if (uid == currentUid && mcVersion == currentVersion) {
-            ui->build_comboBox->clear();
-            for (const auto& build : ver->builds) {
-                ui->build_comboBox->addItem(build.build);
+            const bool isVanilla = (displayName == "Vanilla");
+
+            if (isVanilla) {
+                ui->download_button->setEnabled(!ver->builds.isEmpty());
+            } else {
+                ui->build_comboBox->clear();
+                for (const auto& build : ver->builds) {
+                    ui->build_comboBox->addItem(build.build);
+                }
+                ui->build_comboBox->setEnabled(true);
+                ui->download_button->setEnabled(!ver->builds.isEmpty());
             }
-            ui->build_comboBox->setEnabled(true);
         }
     });
 
     connect(m_metaManager, &MetaManager::loadFailed, this, [this](const QString& error) {
         m_out << "[ERROR] Load failed: " << error << "\n";
         m_log.flush();
+    });
+
+    
+    connect(m_metaManager, &MetaManager::downloaded, this,
+        [this](const QString& uid, const QString& mcVersion, const QString& build, const QString& path) {
+        m_out << "[OK] Build downloaded: " << uid << " " << mcVersion << " " << build
+              << " -> " << path << "\n";
+        m_log.flush();
+        ui->download_button->setEnabled(true);
+    });
+
+    connect(m_metaManager, &MetaManager::downloadFailed, this,
+        [this](const QString& uid, const QString& mcVersion, const QString& build, const QString& error) {
+        m_out << "[ERROR] Build download failed: " << uid << " " << mcVersion << " " << build
+              << " -> " << error << "\n";
+        m_log.flush();
+        ui->download_button->setEnabled(true);
+    });
+
+    connect(ui->download_button, &QPushButton::clicked, this, [this]() {
+        const QString displayName = ui->loader_comboBox->currentText();
+        const QString uid = displayNameToUid(displayName);
+        const QString mcVersion = ui->version_comboBox->currentText();
+        const bool isVanilla = (displayName == "Vanilla");
+
+        const QString build = isVanilla ? QString() : ui->build_comboBox->currentText();
+
+        if (uid.isEmpty() || mcVersion.isEmpty()) {
+            m_out << "[WARN] Download requested with incomplete selection\n";
+            m_log.flush();
+            return;
+        }
+
+        if (!isVanilla && (build.isEmpty() || !ui->build_comboBox->isEnabled())) {
+            m_out << "[WARN] Download requested with incomplete build selection\n";
+            m_log.flush();
+            return;
+        }
+
+        auto task = m_metaManager->download(uid, mcVersion, build);
+        if (!task) {
+            return;
+        }
+
+        ui->download_button->setEnabled(false);
+        task->start();
     });
 
     fetchIndex();
@@ -236,11 +291,17 @@ void MainWindow::fetchVersion(const QString& uid, const QString& mcVersion) {
 
         const MetaVersion* ver = m_metaManager->version(uid, mcVersion);
         if (ver) {
-            ui->build_comboBox->clear();
-            for (const auto& build : ver->builds) {
-                ui->build_comboBox->addItem(build.build);
+            const bool isVanilla = (ui->loader_comboBox->currentText() == "Vanilla");
+            if (isVanilla) {
+                ui->download_button->setEnabled(!ver->builds.isEmpty());
+            } else {
+                ui->build_comboBox->clear();
+                for (const auto& build : ver->builds) {
+                    ui->build_comboBox->addItem(build.build);
+                }
+                ui->build_comboBox->setEnabled(true);
+                ui->download_button->setEnabled(!ver->builds.isEmpty());
             }
-            ui->build_comboBox->setEnabled(true);
         }
         return;
     }

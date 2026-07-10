@@ -1,6 +1,8 @@
 #include "MetaManager.hpp"
 #include <QDebug>
 #include <QDir>
+#include <QFileInfo>
+#include <QUrl>
 
 MetaManager::MetaManager(const QString& cacheDir,
                          const QString& url,
@@ -191,6 +193,132 @@ bool MetaManager::isVersionLoaded(const QString& uid, const QString& mc_version)
     if (it == m_versionCaches.end())
         return false;
     return it.value()->isLoaded();
+}
+
+NetRequestTask* MetaManager::download(const QString& uid, const QString& mc_version,
+                                      const QString& build, const QString& destDir) {
+    const MetaVersion* ver = version(uid, mc_version);
+    if (!ver) {
+        qWarning() << "downloadBuild: version not loaded:" << uid << mc_version;
+        emit downloadFailed(uid, mc_version, build, "Version metadata not loaded");
+        return nullptr;
+    }
+ 
+    const MetaBuilds* buildInfo = nullptr;
+    QString resolvedBuild = build;
+ 
+    if (build.isEmpty()) {
+        if (ver->builds.isEmpty()) {
+            qWarning() << "downloadBuild: version has no builds:" << uid << mc_version;
+            emit downloadFailed(uid, mc_version, build, "Version has no builds available");
+            return nullptr;
+        }
+        buildInfo = &ver->builds.first();
+        resolvedBuild = buildInfo->build;
+    } else {
+        buildInfo = ver->findByBuild(build);
+        if (!buildInfo) {
+            qWarning() << "downloadBuild: build not found:" << uid << mc_version << build;
+            emit downloadFailed(uid, mc_version, build, "Build not found in version metadata");
+            return nullptr;
+        }
+    }
+ 
+    const QString key = uid + "/" + mc_version + "/" + resolvedBuild;
+ 
+    if (m_downloadTasks.contains(key)) {
+        auto existing = m_downloadTasks.value(key);
+        if (!existing->isFinished())
+            return existing;
+    }
+ 
+    if (buildInfo->download.url.isEmpty()) {
+        emit downloadFailed(uid, mc_version, resolvedBuild, "Build has no download URL");
+        return nullptr;
+    }
+ 
+    const QString baseDir = destDir.isEmpty()
+        ? QDir(m_cacheDir).filePath(uid + "/" + mc_version + "/builds")
+        : destDir;
+ 
+    const QString fileName = buildInfo->download.name.isEmpty()
+        ? QFileInfo(QUrl(buildInfo->download.url).path()).fileName()
+        : buildInfo->download.name;
+ 
+    if (fileName.isEmpty()) {
+        emit downloadFailed(uid, mc_version, resolvedBuild, "Cannot determine destination file name");
+        return nullptr;
+    }
+ 
+    const QString destPath = QDir(baseDir).filePath(fileName);
+ 
+    auto request = std::make_shared<NetRequest>();
+    request->url = QUrl(buildInfo->download.url);
+ 
+    auto sink = std::make_unique<FileSink>(destPath);
+ 
+    int validatorsAdded = 0;
+ 
+    if (!buildInfo->download.sha256.isEmpty()) {
+        sink->addValidator(std::make_unique<HashValidator>(
+            QCryptographicHash::Sha256, buildInfo->download.sha256.toLower()));
+        ++validatorsAdded;
+    }
+    if (!buildInfo->download.sha1.isEmpty()) {
+        sink->addValidator(std::make_unique<HashValidator>(
+            QCryptographicHash::Sha1, buildInfo->download.sha1.toLower()));
+        ++validatorsAdded;
+    }
+    if (!buildInfo->download.md5.isEmpty()) {
+        sink->addValidator(std::make_unique<HashValidator>(
+            QCryptographicHash::Md5, buildInfo->download.md5.toLower()));
+        ++validatorsAdded;
+    }
+ 
+    if (validatorsAdded == 0) {
+        for (const QString& hash : { buildInfo->download.sha256,
+                                      buildInfo->download.sha1,
+                                      buildInfo->download.md5 }) {
+            if (auto validator = HashValidator::fromExpectedHex(hash)) {
+                sink->addValidator(std::move(validator));
+                ++validatorsAdded;
+            }
+        }
+    }
+ 
+    if (validatorsAdded == 0) {
+        qWarning() << "downloadBuild: no usable hash for" << key
+                   << "- file integrity will NOT be verified";
+    }
+ 
+    request->sink = std::move(sink);
+ 
+    auto task = new NetRequestTask(request, m_nam, this);
+ 
+    connect(task, &Task::progress, this,
+        [this, uid, mc_version, resolvedBuild](qint64 current, qint64 total, const QString&) {
+        emit downloadProgress(uid, mc_version, resolvedBuild, current, total);
+    });
+ 
+    connect(task, &Task::completed, this, [this, uid, mc_version, resolvedBuild, key, destPath, task]() {
+        m_downloadTasks.remove(key);
+        emit downloaded(uid, mc_version, resolvedBuild, destPath);
+        task->deleteLater();
+    });
+ 
+    connect(task, &Task::failed, this, [this, uid, mc_version, resolvedBuild, key, task](const QString& error) {
+        m_downloadTasks.remove(key);
+        emit downloadFailed(uid, mc_version, resolvedBuild, error);
+        task->deleteLater();
+    });
+ 
+    connect(task, &Task::aborted, this, [this, key, task]() {
+        m_downloadTasks.remove(key);
+        task->deleteLater();
+    });
+ 
+    m_downloadTasks[key] = task;
+    return task;
 }
 
 MetaPackageCache* MetaManager::packageCache(const QString& uid) const {
