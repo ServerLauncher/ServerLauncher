@@ -1,0 +1,6 @@
+<RCC>
+  <qresource prefix="/rec">
+    <file>killServer.png</file>
+    <file>launchServer.png</file>
+  </qresource>
+</RCC>

@@ -1,7 +1,7 @@
 #include <QApplication>
 #include <QWidget>
 
-#include "mainwindow.hpp"
+#include "ui/MainWindow.hpp"
 
 int main(int argc, char *argv[])
 {
