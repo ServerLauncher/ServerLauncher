@@ -5,7 +5,7 @@
     {
       "name": "debug",
       "displayName": "Debug build",
-      "generator": "MinGW Makefiles",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
@@ -17,7 +17,7 @@
     {
       "name": "release",
       "displayName": "Release build",
-      "generator": "MinGW Makefiles",
+      "generator": "Ninja",
       "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
