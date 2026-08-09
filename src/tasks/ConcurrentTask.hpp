@@ -9,9 +9,9 @@ class ConcurrentTask : public Task {
 public:
     using Ptr = std::shared_ptr<ConcurrentTask>;
 
-    explicit ConcurrentTask(const QString& task_name = "", int max_concurrent = 6, QObject* parent = nullptr);   
+    explicit ConcurrentTask(const QString& task_name = "", int max_concurrent = 6, QObject* parent = nullptr);
     ~ConcurrentTask() override;
-    
+
     void addTask(Task* task);
     void prioritizeTask(Task* task);
     bool abort() override;

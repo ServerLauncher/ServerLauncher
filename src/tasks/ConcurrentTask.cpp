@@ -2,35 +2,43 @@
 
 ConcurrentTask::ConcurrentTask(const QString& name, int max_concurrent, QObject* parent)
     : Task(parent), m_name(name), m_maxConcurrent(max_concurrent)
-{ }
+{}
+
+ConcurrentTask::~ConcurrentTask() {
+    abort();
+}
 
 void ConcurrentTask::addTask(Task* task) {
+    if (!task) return;
+    
+    if (!task->parent())
+        task->setParent(this);
+        
     m_queue.enqueue(task);
 }
 
-ConcurrentTask::~ConcurrentTask() {
-    for (auto task : m_doing)
-        task->disconnect(this);
-}
-
 void ConcurrentTask::prioritizeTask(Task* task) {
-    if (m_doing.contains(task))
+    if (!task || m_doing.contains(task) || m_done.contains(task))
         return;
 
-    if (m_done.contains(task))
-        return;
+    if (!task->parent())
+        task->setParent(this);
 
     QQueue<Task*> newQueue;
     newQueue.enqueue(task);
-    for (auto t : m_queue){
+    for (auto t : m_queue) {
         if (t != task)
             newQueue.enqueue(t);
     }
     m_queue = newQueue;
+
+    if (isRunning() && m_doing.size() < m_maxConcurrent) {
+        QMetaObject::invokeMethod(this, &ConcurrentTask::executeNextSubTask, Qt::QueuedConnection);
+    }
 }
 
 void ConcurrentTask::executeTask() {
-    if(m_queue.isEmpty()) {
+    if (m_queue.isEmpty()) {
         emitCompleted();
         return;
     }
@@ -41,13 +49,13 @@ void ConcurrentTask::executeTask() {
 }
 
 void ConcurrentTask::executeNextSubTask() {
-    if(!isRunning())
+    if (!isRunning())
         return;
-    if(m_doing.size() >= m_maxConcurrent)
+    if (m_doing.size() >= m_maxConcurrent)
         return;
-    if(m_queue.isEmpty()) {
-        if(m_doing.isEmpty()){
-            if(m_failed.isEmpty())
+    if (m_queue.isEmpty()) {
+        if (m_doing.isEmpty()) {
+            if (m_failed.isEmpty())
                 emitCompleted();
             else
                 emitFailed(QString("%1 subtask(s) failed").arg(m_failed.size()));
@@ -56,23 +64,23 @@ void ConcurrentTask::executeNextSubTask() {
     }
 
     auto task = m_queue.dequeue();
-    qDebug() << "dequeued task:" << task;
     startSubTask(task);
 }
 
 void ConcurrentTask::startSubTask(Task* task) {
     if (!task) {
-        qDebug() << "startSubTask: task is nullptr!";
         QMetaObject::invokeMethod(this, &ConcurrentTask::executeNextSubTask, Qt::QueuedConnection);
         return;
     }
 
-    connect(task, &Task::completed, this, [this, task](){ subTaskSucceeded(task); });
-    connect(task, &Task::failed, this, [this, task](const QString& msg){ subTaskFailed(task, msg); });
-    connect(task, &Task::progress, this, [this, task](qint64 current, qint64 total, const QString& msg){ emitProgress(current, total, msg); });
+    connect(task, &Task::completed, this, [this, task]() { subTaskSucceeded(task); });
+    connect(task, &Task::failed, this, [this, task](const QString& msg) { subTaskFailed(task, msg); });
+    
+    connect(task, &Task::stepChanged, this, [this](const QString& msg) {
+        emitStepChanged(msg);
+    });
 
     m_doing.insert(task, task);
-
     updateState();
 
     QMetaObject::invokeMethod(task, &Task::start, Qt::QueuedConnection);
@@ -83,30 +91,41 @@ void ConcurrentTask::subTaskSucceeded(Task* task) {
     m_done.insert(task, task);
     disconnect(task, nullptr, this, nullptr);
 
-    emitProgress(m_done.size(), totalSize());
+    updateState();
+    
+    if (task->parent() == this)
+        task->deleteLater();
+
     QMetaObject::invokeMethod(this, &ConcurrentTask::executeNextSubTask, Qt::QueuedConnection);
 }
 
 void ConcurrentTask::subTaskFailed(Task* task, const QString& msg) {
+    Q_UNUSED(msg);
     m_doing.remove(task);
     m_done.insert(task, task);
     m_failed.insert(task, task);
     disconnect(task, nullptr, this, nullptr);
 
-    emitProgress(m_done.size(), totalSize());
+    updateState();
+
+    if (task->parent() == this)
+        task->deleteLater();
+
     QMetaObject::invokeMethod(this, &ConcurrentTask::executeNextSubTask, Qt::QueuedConnection);
 }
 
 bool ConcurrentTask::abort() {
-    m_queue.clear();
-    if(m_doing.isEmpty()){
-        emitAborted();
-        return true;
+    while (!m_queue.isEmpty()) {
+        auto task = m_queue.dequeue();
+        if (task->parent() == this)
+            task->deleteLater();
     }
 
     for (auto task : m_doing) {
         task->disconnect(this);
         task->abort();
+        if (task->parent() == this)
+            task->deleteLater();
     }
     m_doing.clear();
 
@@ -126,7 +145,18 @@ void ConcurrentTask::updateState() {
 
 void ConcurrentTask::clear() {
     Q_ASSERT(!isRunning());
-    m_queue.clear();
+
+    while (!m_queue.isEmpty()) {
+        auto task = m_queue.dequeue();
+        if (task->parent() == this)
+            task->deleteLater();
+    }
+
+    for (auto task : m_done.keys()) {
+        if (task->parent() == this)
+            task->deleteLater();
+    }
+
     m_doing.clear();
     m_done.clear();
     m_failed.clear();
